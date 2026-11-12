@@ -15,7 +15,12 @@ One command, `python -m deposco_evals --data <csv>`, runs a straight pipeline of
 | Judge | `judge` + [`judge_rubric.md`](deposco_evals/judge_rubric.md) | `gemini-3.8-flash` grades grounding and behaviour: PASS, FLAG, or FAIL. |
 | Run, report | `run`, `report` | Case verdicts, aggregation, explicit ERRORs; a Markdown and a JSON report per file. |
 
-The only fake in the 259 offline tests is the LLM. It's replaced at the HTTP boundary or by a scripted assistant and judge.
+All 259 tests run offline. The test doubles are:
+- a fake HTTP transport for the client, assistant, and judge
+- a scripted `complete` callable for the run, report, and CLI tests (the CLI tests patch `make_complete` to return it)
+- a fake judge callable, plus a patched `judge_reply`, for calibration
+
+One test also patches `answer_correct` to raise an error, to show that a grading bug in one case is recorded as ERROR without losing the rest of the run.
 
 ## The eight decisions
 
