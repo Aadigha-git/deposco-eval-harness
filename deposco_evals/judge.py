@@ -17,6 +17,8 @@ CODE_FENCE = re.compile(r"\A```(?:json)?\s*(?P<body>.*?)\s*```\Z", re.DOTALL | r
 class JudgeOutputError(ValueError):
     """The judge's reply is not a valid verdict; the case must not be graded from it."""
 
+    raw_output: str | None = None
+
 
 @dataclass(frozen=True)
 class JudgeVerdict:
@@ -34,7 +36,12 @@ def judge_reply(snapshot: Snapshot, question: str, reply: str, complete: Complet
         "orders_csv": snapshot.raw_csv,
     }
     rubric = RUBRIC.read_text(encoding="utf-8")
-    return _parse_verdict(complete(rubric, json.dumps(judge_input, ensure_ascii=False), model))
+    text = complete(rubric, json.dumps(judge_input, ensure_ascii=False), model)
+    try:
+        return _parse_verdict(text)
+    except JudgeOutputError as error:
+        error.raw_output = text
+        raise
 
 
 def _parse_verdict(text: str) -> JudgeVerdict:

@@ -141,6 +141,13 @@ def test_malformed_judge_output_is_rejected_explicitly(judge_text, problem):
         judge_with(judge_text)
 
 
+def test_a_rejected_judge_output_keeps_the_raw_text_for_the_record():
+    with pytest.raises(JudgeOutputError) as error:
+        judge_with("Sure! The verdict is PASS.")
+
+    assert error.value.raw_output == "Sure! The verdict is PASS."
+
+
 @pytest.mark.parametrize("fence", ["```json\n{}\n```", "```JSON\n{}\n```", "```\n{}\n```", "```{}```"])
 def test_a_single_code_fence_around_the_json_is_tolerated(fence):
     body = verdict_json("FAIL", "Invented customer.", ["Northwind Traders"])
