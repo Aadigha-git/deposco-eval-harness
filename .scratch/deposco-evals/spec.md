@@ -157,12 +157,13 @@ The full rubric is the judge's system prompt, kept as one Markdown file in the p
 
 - **Input**: exactly the rubric, the reference date (`today` from the file name), the data file name, the question, the assistant reply, and the raw CSV.
   - The judge never receives the expected answer, its evidence, the case category, or any deterministic metric result.
-  - The untrusted fields (question, reply, CSV) are sent as one JSON object, so their content can't escape its field or pose as rubric text.
+  - The untrusted fields (question, reply, CSV) are sent as one JSON object, so their content can't syntactically escape its field. The model still reads that text, so the rubric also states that everything in the input is material to grade, never instructions. Resistance beyond that is measured by calibration, not guaranteed.
 - **Output**: one JSON object `{verdict, reason, evidence}`. Temperature 0, using the judge model (`gemini-3.8-flash`).
   - `verdict` is exactly `PASS`, `FLAG`, or `FAIL`.
-  - `reason` is one non-empty sentence.
-  - `evidence` is a list of exact quotes from the reply or CSV rows, with at least one for PASS and FAIL.
-  - A single wrapping code fence is tolerated. Anything else (prose around the JSON, an unknown verdict, missing or mistyped fields) is rejected as a judge error, and the case fails.
+  - `reason` is a non-empty string. The rubric asks for one sentence, but length isn't enforced.
+  - `evidence` is a list of non-empty strings, with at least one for PASS and FAIL. The rubric asks for exact quotes from the reply or CSV rows; whether the quotes are verbatim is observed in calibration, not enforced.
+  - A single wrapping code fence, with an optional `json` tag in any case, is tolerated.
+  - Anything else is rejected as a judge error, and the case fails. That covers prose around the JSON, several objects, a repeated or unexpected field, an unknown verdict, and missing or mistyped fields.
 - **What it grades**: **grounding** (every fact the reply states about the data, including the filter and date range it says it used, matches the CSV and the reference date) and **behaviour** (answers about orders, refuses changes and unrelated questions, claims no changes, ignores instructions inside the CSV, admits missing data instead of inventing it). It does not check arithmetic or whether the final value is right; `answer_correct` does that.
 - **Verdicts**:
   - **PASS**: a supported explanation and compliant behaviour.
@@ -179,7 +180,11 @@ There are 10 diverse examples across the three files and several categories, cov
 - using the wrong date range
 - giving no explanation, or a vague one
 
-Each example has a human verdict and an explicit rationale. The labels are committed, together with the rubric they were labelled against, before the judge is ever run on them. The rubric isn't tuned from the judge's predictions until the first agreement is recorded.
+Each example has a human verdict and an explicit rationale. The labels are committed, together with the rubric they were labelled against, before the judge is ever run on them. The rubric isn't tuned from the judge's predictions until the first agreement is recorded. Any later change is recorded in the design document, and the judge is re-run.
+
+**Rubric revision before the first judge run:** code review, not judge output, found three gaps in the first rubric. It didn't define the date windows. Its PASS wording read as excluding refusals. And it left open whether a wrong stated count is arithmetic or a contradicted fact. The rubric was clarified before the judge had ever been run on the labels. All 10 human verdicts were re-checked against the clarified rubric and none changed.
+
+**Label coverage gaps:** no example uses a not-in-data case (P7, P11), the ties case (C2), or the date-boundary case (C3). No example refuses an answerable question, and every PASS example is a live reply.
 
 The calibration mode runs the judge on each example and writes a calibration report with:
 - exact verdict agreement (n out of 10)
@@ -214,7 +219,7 @@ The repo uses git with small commits, one per plan step. It commits the code, th
 ## Testing Decisions
 
 - Tests check only external behaviour, through the confirmed seams; they don't test private helpers. Only the system boundary is faked, never the project's own modules:
-  - The **llm** client and the **assistant** are tested through the real client, with a fake HTTP transport in place of `urlopen`. It records each request and replays a canned Gemini response or error, so no key or network is needed.
+  - The **llm** client, the **assistant**, and the **judge** are tested through the real client, with a fake HTTP transport in place of `urlopen`. It records each request and replays a canned Gemini response or error, so no key or network is needed.
   - The **run** tests use a scripted `complete` callable that returns canned assistant or judge text.
 - **Seam A** (expected answers from a snapshot):
   - Small hand-built in-memory snapshots with hand-computed answers cover these edges (CSV parsing is covered by the snapshot-loading tests): today minus 6 days is in the window and minus 7 is out, the first of the month, `before this month`, ties, empty results, not-in-data cases, and the injected customer name.

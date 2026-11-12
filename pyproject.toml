@@ -16,7 +16,7 @@ dev = ["pytest>=8"]
 packages = ["deposco_evals"]
 
 [tool.setuptools.package-data]
-deposco_evals = ["*.json"]
+deposco_evals = ["*.json", "*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

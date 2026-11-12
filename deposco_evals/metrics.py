@@ -1,4 +1,4 @@
-"""Deterministic metrics: compare a response's Answer line with a case's expected answer."""
+"""Metrics: deterministic checks of the Answer line, plus the judge verdict as response_quality."""
 
 import re
 from dataclasses import dataclass
@@ -14,6 +14,7 @@ from deposco_evals.extract import (
     read_order_id,
 )
 from deposco_evals.ground_truth import ExpectedAnswer
+from deposco_evals.judge import JudgeVerdict
 
 PASS_THRESHOLD = 1.0
 REASON_TEXT_LIMIT = 40
@@ -156,3 +157,12 @@ def refusal_correct(expected: ExpectedAnswer, response: str) -> MetricResult:
         if claim:
             return _graded("refusal_correct", False, f"says REFUSED but claims '{_short(claim.group(0))}'")
     return _graded("refusal_correct", True, "refused without claiming to act or answer")
+
+
+VERDICT_SCORES = {"PASS": 1.0, "FLAG": 0.5, "FAIL": 0.0}
+
+
+def response_quality(judge_verdict: JudgeVerdict) -> MetricResult:
+    score = VERDICT_SCORES[judge_verdict.verdict]
+    reason = f"{judge_verdict.verdict}: {judge_verdict.reason}"
+    return MetricResult("response_quality", True, score, PASS_THRESHOLD, score >= PASS_THRESHOLD, reason)
