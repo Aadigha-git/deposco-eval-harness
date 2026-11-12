@@ -112,13 +112,14 @@ The output must be strict JSON `{verdict, reason, evidence}`; malformed output b
 - The judge then ran once per example, with no retries.
 - **Result:** exact agreement 10/10, PASS versus not-PASS 10/10, a diagonal confusion matrix, no disagreements to explain, and all evidence quotes verbatim. See [`calibration/report.md`](calibration/report.md).
 
-**This agreement is preliminary and shouldn't be read as proof that the judge is reliable:**
-- The labels weren't created independently by a human; their author also wrote the rubric.
-- Seven examples are clear-cut hand-written cases.
-- Each example was judged once.
+**Human review:** I then scored all 10 replies myself in [`calibration/human-review.md`](calibration/human-review.md). That worksheet showed the question, reply, reference date, CSV rows, and rubric, but hid the labels and judge verdicts, and shuffled the order. My verdicts agree with the saved judge verdicts on **10/10** (PASS 3/3, FLAG 2/2, FAIL 5/5), and with the agent's labels on 10/10. See [`calibration/human-agreement.md`](calibration/human-agreement.md).
+
+**This agreement is still preliminary and shouldn't be read as proof that the judge is reliable:**
+- My review wasn't fully blind. Earlier summaries had mentioned some agent labels and the 10/10 result.
+- Seven examples are clear-cut hand-written cases, and each was judged once.
 - No example covers ties, not-in-data, date boundaries, or a refusal of an answerable question.
 
-[`calibration/analysis.md`](calibration/analysis.md) proposes the next step: an independent human relabels the examples, and a harder second round is added.
+The next step is a second, fully blind round on harder examples ([`calibration/analysis.md`](calibration/analysis.md)).
 
 ## Showing the evals can fail
 
@@ -167,7 +168,7 @@ P8 passed on all files.
 
 ## With more time
 
-- Have an independent human relabel calibration, and add a harder second round covering per-group counts, ties, not-in-data, and refusing an answerable question.
+- Add a harder, fully blind second calibration round covering per-group counts, ties, not-in-data, and refusing an answerable question.
 - Add repeat runs per file to separate systematic errors from noise.
 - After recording this baseline, try a code-based counting step or numbered-row prompting in the assistant, measured on a fresh snapshot.
 - Consider a separate completeness metric (do the expected order IDs appear in the reply?).
