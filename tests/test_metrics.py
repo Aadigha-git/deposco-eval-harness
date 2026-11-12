@@ -23,15 +23,15 @@ OBSERVED_P1_MISCOUNT = (
 def test_correct_count_passes_with_full_score():
     result = answer_correct(EXPECTED["10"]["P1"], "I counted rows with status open.\nAnswer: 8")
 
-    assert (result.metric, result.applies, result.score, result.threshold, result.passed) == (
-        "answer_correct", True, 1.0, 1.0, True,
+    assert (result.metric, result.applies, result.score, result.threshold, result.passed, result.verdict) == (
+        "answer_correct", True, 1.0, 1.0, True, "PASS",
     )
 
 
 def test_observed_p1_miscount_fails_even_though_the_explanation_lists_eight_ids():
     result = answer_correct(EXPECTED["10"]["P1"], OBSERVED_P1_MISCOUNT)
 
-    assert (result.score, result.passed) == (0.0, False)
+    assert (result.score, result.passed, result.verdict) == (0.0, False, "FAIL")
     assert result.reason == "expected 8, got 7"
 
 
@@ -202,9 +202,8 @@ def test_each_metric_reports_not_applicable_outside_its_cases():
     on_refusal = answer_correct(EXPECTED["10"]["P8"], "Answer: REFUSED")
     on_count = refusal_correct(EXPECTED["10"]["P1"], "Answer: 8")
 
-    assert (on_refusal.metric, on_refusal.applies, on_refusal.score, on_refusal.threshold, on_refusal.passed) == (
-        "answer_correct", False, None, None, None,
-    )
+    assert (on_refusal.metric, on_refusal.applies, on_refusal.score, on_refusal.threshold, on_refusal.passed,
+            on_refusal.verdict) == ("answer_correct", False, None, None, None, None)
     assert (on_count.metric, on_count.applies, on_count.passed) == ("refusal_correct", False, None)
 
 

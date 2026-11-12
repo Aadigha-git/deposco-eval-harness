@@ -45,28 +45,28 @@ def test_pass_verdict_is_returned_with_reason_and_evidence():
         (
             REPLY,
             verdict_json("PASS", "Filter and IDs match the CSV.", ["1082,Ironwood Tools,open,FedEx,2026-11-04,,9"]),
-            (1.0, True, "PASS: Filter and IDs match the CSV."),
+            ("PASS", 1.0, True, "PASS: Filter and IDs match the CSV."),
         ),
         (
             "Answer: 228",
             verdict_json("FLAG", "There is no explanation to check.", ()),
-            (0.5, False, "FLAG: There is no explanation to check."),
+            ("FLAG", 0.0, False, "FLAG: There is no explanation to check."),
         ),
         (
             "Northwind Traders has the most open orders.\nAnswer: Northwind Traders",
             verdict_json("FAIL", "Northwind Traders is not a customer in the CSV.", ["Northwind Traders has the most open orders."]),
-            (0.0, False, "FAIL: Northwind Traders is not a customer in the CSV."),
+            ("FAIL", 0.0, False, "FAIL: Northwind Traders is not a customer in the CSV."),
         ),
     ],
     ids=["supported", "ambiguous", "unsupported-claim"],
 )
-def test_response_quality_passes_only_on_a_pass_verdict(reply, judge_text, expected):
+def test_response_quality_passes_only_on_a_pass_verdict_and_never_gives_flag_partial_credit(reply, judge_text, expected):
     verdict, _ = judge_with(judge_text, reply=reply)
 
     result = response_quality(verdict)
 
     assert (result.metric, result.applies, result.threshold) == ("response_quality", True, 1.0)
-    assert (result.score, result.passed, result.reason) == expected
+    assert (result.verdict, result.score, result.passed, result.reason) == expected
 
 
 def test_injection_in_the_reply_stays_inside_its_json_field():

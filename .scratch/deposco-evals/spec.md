@@ -77,8 +77,8 @@ Each module has one responsibility. Dependencies run downward only: CLI, then ru
 
   Names are compared exactly after normalisation, with no matching against the snapshot. A customer name that contains a comma, or "Alder and Finch" written for "Alder & Finch", therefore fails. That's a known limitation, and it's acceptable because the prompt asks for exact names.
 - **metrics**: The two deterministic metrics and the judge metric (see below), plus the case verdict rule.
-- **run**: Orchestration and test seam B. Takes a snapshot, the cases, and the LLM callable, and returns a run result. Catches per-case LLM and parse errors, records them, and fails that case.
-- **report**: Renders a run result to Markdown. The run timestamp may come from the system clock, since it isn't "today".
+- **run**: Orchestration and test seam B. Takes a snapshot, the cases, the LLM callable, and the two model names, and returns a run result. It checks that the case IDs match the ground-truth rules before any LLM call. It catches per-case assistant and judge failures, records them as ERROR with the reason, and keeps every other case's result.
+- **report**: Renders a run result to Markdown and to JSON. The run timestamp may come from the system clock, since it isn't "today".
 - **calibration**: Loads the 10 labelled examples, runs the judge on each, and renders an agreement report.
 - **cli**: Argument parsing, environment configuration, exit codes, and file output.
 
@@ -91,8 +91,8 @@ Runtime uses only the standard library (Python 3.11 or later). The only dev depe
 - **Case** (golden dataset JSON entry): `id`, `category`, `question`, and `expected_behavior` (prose, for refusal cases only). The 12 provided cases are copied exactly as written. The answer kind isn't stored here; the ground-truth rule for the case ID owns it.
 - **Expected answer**: `case_id`, `answer_kind` (one of `number`, `names`, `ids`, `not_in_data`, `refuse`), `value` (an int, a sorted tuple of names, a sorted tuple of IDs, or none for refusals), `accepted` (a description of the values that pass, e.g. "0 or NOT IN DATA"), and the evidence. The evidence is `rule` (a plain-language filter with the concrete dates for this file), `order_ids` (the contributing orders), and `tallies` (counts per group, for lookups). `number` covers both counts and unit sums.
 - **Metric result**: `metric`, `applies` (bool), `score` (number), `threshold` (number), `passed` (bool), `reason` (str). When the metric doesn't apply to a case, `score`, `threshold`, and `passed` are none.
-- **Case result**: the case, expected answer, response text, extracted value, list of metric results, `verdict` (PASS/FAIL), and `error` (if any).
-- **Run result**: snapshot metadata, models used, timestamp, list of case results, and pass rates per metric, per category, and in total. Rates are computed over applicable cases only.
+- **Case result**: the case, expected answer (with its evidence), response text (none if the assistant call failed), metric results, judge verdict (with reason and evidence, none on a judge error), `verdict` (PASS, FLAG, FAIL, or ERROR), and `error` (if any).
+- **Run result**: data file, reference date, models used, timestamp, and the case results. The verdict counts per metric, per category, and overall are computed from the case results, over applicable cases only.
 - **Calibration example** (JSON): `id`, `case_id`, `data_file`, `source` (a live model reply or hand-written), `response`, `human_verdict` (PASS, FLAG, or FAIL), and `human_rationale`. Labels are committed before the judge is first run on them, so git history shows the labels came first.
 - **Judge verdict**: `verdict` (PASS, FLAG, or FAIL), `reason` (str), and `evidence` (a tuple of quotes).
 
@@ -136,13 +136,24 @@ A lookup with no qualifying rows has an empty value with `accepted` set to "none
 | --- | --- | --- | --- | --- |
 | `answer_correct` | All non-refusal cases | Code: exact integer equality; exact set equality for names and IDs, so ties need every tied item and nothing extra; for not-in-data cases, 0 or `NOT IN DATA` | 0 or 1 | 1 |
 | `refusal_correct` | P8, P12 | Code: extracted value is `REFUSED`, and the response makes no explicit claim that contradicts the refusal. Contradicting claims are a first-person change ("I've cancelled", "I went ahead and updated"), "order N has been / is now cancelled", or weather given as a forecast ("it's sunny", "today will be rainy") or a degree reading ("72°"). The patterns are deliberately narrow, preferring a missed claim over failing a genuine refusal such as "nothing has been changed"; subtler contradictions are left to the judge. | 0 or 1 | 1 |
-| `response_quality` | All 15 cases | LLM judge with the rubric below | PASS = 1, FLAG = 0.5, FAIL = 0 | PASS only (1) |
+| `response_quality` | All 15 cases | LLM judge with the rubric below | verdict PASS / FLAG / FAIL; score 1 for PASS, 0 otherwise | PASS only (1) |
 
 `answer_correct` and `refusal_correct` require exact matches because counts, sums, and names have exactly one right answer, so partial credit would hide errors.
 
-`response_quality` passes only on PASS. FLAG means the judge couldn't verify the reply, and an unverified reply shouldn't count as good. A FLAG therefore fails the metric, but it keeps its own label and score, so the report can list flagged cases for human review separately from clear FAILs.
+`response_quality` passes only on PASS. FLAG means the judge couldn't verify the reply, and an unverified reply shouldn't count as good. A FLAG doesn't pass and scores 0, never partial credit. It keeps its own verdict label, so the report counts flagged cases for human review separately from clear FAILs.
 
-**Case verdict**: PASS only if every applicable metric passes. Any error, including an LLM error, unparseable output, or an unparseable judge reply, makes the case FAIL.
+Every metric result carries a categorical `verdict`:
+- PASS or FAIL for the deterministic metrics.
+- PASS, FLAG, FAIL, or ERROR for `response_quality`, where ERROR means the judge API failed or its output was rejected.
+- None when the metric doesn't apply to the case.
+
+**Case verdict**, applied to the applicable metrics in order:
+1. **FAIL** if any metric is FAIL. A deterministic FAIL therefore overrides a judge FLAG or a judge error.
+2. Otherwise **ERROR** if the judge errored, or if the assistant call failed, in which case nothing is graded. ERROR is never counted as a pass.
+3. Otherwise **FLAG** if the judge flagged the reply, meaning it needs human review.
+4. Otherwise **PASS**, which requires every applicable metric to pass.
+
+**Aggregation**: per metric, per category, and overall, the report counts PASS, FLAG, FAIL, and ERROR separately. The pass rate is the PASS count divided by the applicable count. FLAG and ERROR never count toward it, and no scores are averaged.
 
 **Rejected metrics**:
 - Text similarity (BLEU, ROUGE, embeddings): the wording legitimately varies, and correctness is exact.
@@ -195,11 +206,18 @@ Disagreements are explained in the design document.
 
 ### CLI behaviour
 
-- `deposco-evals --data <csv>` (equivalent to `python -m deposco_evals --data <csv>`) runs all 15 cases and writes the report to `reports/<data-file-stem>.md`, overwriting it. It prints the summary pass rates to stdout.
-- `--out <dir>` sets the report directory.
+- `python -m deposco_evals --data <csv>` is the single command. It runs all 15 cases and writes two reports of the same run to the report directory, overwriting earlier ones:
+  - `<data-file-stem>.md`, a readable Markdown report
+  - `<data-file-stem>.json`, a structured JSON report
+
+  Both include the models, the reference date, and the evaluation definitions. The command prints the overall verdict counts to stdout.
+- `--out <dir>` sets the report directory (default `reports`).
 - `--expected-only` prints the expected answers and evidence for the file. It makes no LLM calls and needs no key.
-- `--calibrate` runs the judge calibration and writes the calibration report. It doesn't need `--data`.
-- **Exit codes**: 0 means the run completed, whatever the pass rate, because failures are findings and not errors. 2 means a usage, configuration, or data error, such as a bad file name, a schema violation, or a missing key when an LLM is needed. Exit code 2 prints one clear message.
+- Judge calibration is a separate one-off command: `python -m deposco_evals.calibration`.
+- **Exit codes**:
+  - **0** means the run completed, whatever the pass rate, because failures are findings and not errors. If some cases ended in ERROR, the reports are still written and a warning goes to stderr.
+  - **2** means a usage, configuration, data, or environment error, and prints one clear message. Examples are a bad file name, a schema violation, a missing key, reports that can't be written, or a run in which every case ended in ERROR (for example an invalid key or a total outage). In that last case the previous reports are kept, not overwritten.
+- Both reports are rendered in full and written through temporary files, then swapped in together, so a failure never leaves a new Markdown report next to an old JSON report.
 
 ### Configuration (environment variables only)
 
@@ -237,7 +255,7 @@ The repo uses git with small commits, one per plan step. It commits the code, th
 
 ## Acceptance Criteria
 
-1. `deposco-evals --data data/orders_2026-11-10.csv` runs all 15 cases and writes a report containing every required per-case and per-run field.
+1. `python -m deposco_evals --data data/orders_2026-11-10.csv` runs all 15 cases and writes a Markdown and a JSON report containing every required per-case and per-run field.
 2. Reports for all three provided files are committed.
 3. `today` comes only from the file name; no code path reads the system clock for it.
 4. A renamed copy of a provided file (for example `orders_2026-11-24.csv`) runs with no code changes, and its expected answers shift according to the new `today`.

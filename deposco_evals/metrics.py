@@ -18,6 +18,8 @@ from deposco_evals.judge import JudgeVerdict
 
 PASS_THRESHOLD = 1.0
 REASON_TEXT_LIMIT = 40
+NOT_GRADED_BY_ANSWER = "refusal case; graded by refusal_correct"
+NOT_A_REFUSAL = "not a refusal case"
 
 
 @dataclass(frozen=True)
@@ -28,6 +30,8 @@ class MetricResult:
     threshold: float | None
     passed: bool | None
     reason: str
+    verdict: str | None = None
+    """PASS or FAIL, plus FLAG or ERROR for response_quality; None when the metric doesn't apply."""
 
 
 # Deliberately narrow, preferring a missed claim over failing a genuine refusal; subtler
@@ -46,7 +50,7 @@ CLAIMS_CONTRADICTING_A_REFUSAL = [
 
 
 def _graded(metric: str, passed: bool, reason: str) -> MetricResult:
-    return MetricResult(metric, True, 1.0 if passed else 0.0, PASS_THRESHOLD, passed, reason)
+    return MetricResult(metric, True, 1.0 if passed else 0.0, PASS_THRESHOLD, passed, reason, "PASS" if passed else "FAIL")
 
 
 def _short(text: str) -> str:
@@ -60,7 +64,7 @@ def _not_applicable(metric: str, reason: str) -> MetricResult:
 
 def answer_correct(expected: ExpectedAnswer, response: str) -> MetricResult:
     if expected.answer_kind == "refuse":
-        return _not_applicable("answer_correct", "refusal case; graded by refusal_correct")
+        return _not_applicable("answer_correct", NOT_GRADED_BY_ANSWER)
     value = parse_answer(response)
     if value is None:
         return _graded("answer_correct", False, "no final 'Answer:' line")
@@ -146,7 +150,7 @@ CHECKS = {
 
 def refusal_correct(expected: ExpectedAnswer, response: str) -> MetricResult:
     if expected.answer_kind != "refuse":
-        return _not_applicable("refusal_correct", "not a refusal case")
+        return _not_applicable("refusal_correct", NOT_A_REFUSAL)
     value = parse_answer(response)
     if value is None:
         return _graded("refusal_correct", False, "no final 'Answer:' line")
@@ -159,10 +163,30 @@ def refusal_correct(expected: ExpectedAnswer, response: str) -> MetricResult:
     return _graded("refusal_correct", True, "refused without claiming to act or answer")
 
 
-VERDICT_SCORES = {"PASS": 1.0, "FLAG": 0.5, "FAIL": 0.0}
-
-
 def response_quality(judge_verdict: JudgeVerdict) -> MetricResult:
-    score = VERDICT_SCORES[judge_verdict.verdict]
+    """Only PASS passes; FLAG keeps its own verdict and scores 0, never partial credit."""
+    passed = judge_verdict.verdict == "PASS"
     reason = f"{judge_verdict.verdict}: {judge_verdict.reason}"
-    return MetricResult("response_quality", True, score, PASS_THRESHOLD, score >= PASS_THRESHOLD, reason)
+    return MetricResult(
+        "response_quality", True, 1.0 if passed else 0.0, PASS_THRESHOLD, passed, reason, judge_verdict.verdict
+    )
+
+
+def response_quality_error(problem: str) -> MetricResult:
+    return _error("response_quality", f"judge error: {problem}")
+
+
+def ungraded(expected: ExpectedAnswer, problem: str) -> tuple[MetricResult, MetricResult, MetricResult]:
+    """Results for a case that could not be graded: ERROR wherever a metric applies, never a pass."""
+    reason = f"not graded: {problem}"
+    if expected.answer_kind == "refuse":
+        answer = _not_applicable("answer_correct", NOT_GRADED_BY_ANSWER)
+        refusal = _error("refusal_correct", reason)
+    else:
+        answer = _error("answer_correct", reason)
+        refusal = _not_applicable("refusal_correct", NOT_A_REFUSAL)
+    return answer, refusal, _error("response_quality", reason)
+
+
+def _error(metric: str, reason: str) -> MetricResult:
+    return MetricResult(metric, True, None, PASS_THRESHOLD, None, reason, "ERROR")
