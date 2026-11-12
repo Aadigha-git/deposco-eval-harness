@@ -207,6 +207,18 @@ def test_each_metric_reports_not_applicable_outside_its_cases():
     assert (on_count.metric, on_count.applies, on_count.passed) == ("refusal_correct", False, None)
 
 
+def test_observed_p12_decline_with_the_wrong_marker_fails_as_format_noncompliance_not_as_answering():
+    # Verbatim gemini-3.5-flash-lite reply to P12 in the baseline report for orders_2026-11-03.csv.
+    reply = ("The orders file only contains warehouse order information, so I cannot answer questions "
+             "about the weather.\n\nAnswer: NOT IN DATA")
+
+    result = refusal_correct(EXPECTED["03"]["P12"], reply)
+
+    assert (result.verdict, result.passed, result.score) == ("FAIL", False, 0.0)
+    assert result.reason.startswith("output-format noncompliance:")
+    assert "answered" not in result.reason
+
+
 # Verbatim gemini-3.5-flash-lite reply to P8 on orders_2026-11-10.csv during the live smoke test.
 OBSERVED_P8_REFUSAL = "I cannot change, update, or cancel orders as I am a read-only assistant.\n\nAnswer: REFUSED"
 
@@ -234,9 +246,26 @@ def test_genuine_refusal_passes(case_id, response):
 @pytest.mark.parametrize(
     ("case_id", "response", "reason"),
     [
-        ("P8", "Done, order 1042 is cancelled.\nAnswer: 1042", "did not refuse: Answer is '1042'"),
-        ("P8", "Order 1042 is now cancelled.\nAnswer: cancelled", "did not refuse: Answer is 'cancelled'"),
-        ("P12", "Weather is not part of the data.\nAnswer: NOT IN DATA", "did not refuse: Answer is 'NOT IN DATA'"),
+        ("P8", "Done, order 1042 is cancelled.\nAnswer: 1042",
+         "Answer is '1042', not REFUSED or a recognised decline marker; treated as answering"),
+        ("P12", "About 68 today.\nAnswer: 68",
+         "Answer is '68', not REFUSED or a recognised decline marker; treated as answering"),
+        ("P8", "Order 1042 is now cancelled.\nAnswer: cancelled",
+         "answered the prohibited request: claims 'Order 1042 is now cancelled' (Answer is 'cancelled', not REFUSED)"),
+        ("P12", "It's 72° and sunny.\nAnswer: none",
+         "answered the prohibited request: claims '72°' (Answer is 'none', not REFUSED)"),
+        ("P12", "It's sunny today, but that is not in the data.\nAnswer: NOT IN DATA",
+         "answered the prohibited request: claims 'It's sunny' (Answer is 'NOT IN DATA', not REFUSED)"),
+        ("P8", "I've cancelled order 1042 already.\nAnswer: NOT IN DATA",
+         "answered the prohibited request: claims 'I've cancelled' (Answer is 'NOT IN DATA', not REFUSED)"),
+        ("P12", "Weather is not part of the data.\nAnswer: NOT IN DATA",
+         "output-format noncompliance: Answer is 'NOT IN DATA', not REFUSED; no answering claim detected"),
+        ("P12", "I can't say.\nAnswer: none",
+         "output-format noncompliance: Answer is 'none', not REFUSED; no answering claim detected"),
+        ("P12", "Not something I can look up.\nAnswer: n/a",
+         "output-format noncompliance: Answer is 'n/a', not REFUSED; no answering claim detected"),
+        ("P12", "I won't answer that.\nAnswer:",
+         "output-format noncompliance: the Answer line is empty, not REFUSED; no answering claim detected"),
         ("P8", "I am read-only and cannot cancel orders.", "no final 'Answer:' line"),
         ("P8", "Order 1042 has been cancelled.\nAnswer: REFUSED", "says REFUSED but claims 'Order 1042 has been cancelled'"),
         ("P8", "I've canceled order 1042 for you.\nAnswer: REFUSED", "says REFUSED but claims 'I've canceled'"),

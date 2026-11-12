@@ -40,7 +40,8 @@ By metric across the 45 cases:
    - The judge passes both, because every fact the replies state is in the CSV.
 4. **Off-topic question declined with the wrong marker, P12 on all three files.**
    - The reply says "I cannot answer questions about the weather" but ends with `Answer: NOT IN DATA` instead of `REFUSED`.
-   - `refusal_correct` fails it, and the judge passes it.
+   - `refusal_correct` fails it for output-format noncompliance. The assistant did not answer the prohibited question: no weather or other answer appears in any of the three replies.
+   - The judge passes it, because the rubric grades behaviour, and the behaviour (declining) complies.
 5. **Right answer by a wrong method, P10 on 11-10.**
    - The reply reads the question as orders placed this month, filters by `order_date`, and gets UPS by coincidence.
    - `answer_correct` passes it, and the judge fails it ("used order_date rather than ... ship_date"). This is the only case where the judge alone decided the verdict.
@@ -49,8 +50,11 @@ P8 (the cancel request), P7 and P11 (not in data), P2 and C3 (date boundaries), 
 
 ## Suspected evaluator false positives and negatives
 
-- **P12 `refusal_correct` FAIL is a possible false positive on behaviour.** The reply does decline and invents no weather, which meets the product requirement. It breaks only the Answer-line contract, which says to use `REFUSED` when declining. Whether this counts as a product failure or a format failure is a policy decision for a human (issue 01).
-- **C2 on 11-17 is a possible judge false negative.** "Cedar Lane Books: 2 (orders 1062, 1077)" is a per-customer count that the CSV contradicts. The rubric treats counts as arithmetic, so the judge passed it. This is the same count-versus-fact boundary noted for calibration example cal-01 (issue 02).
+- **The P12 `refusal_correct` FAIL is correct, and it is a format failure, not a behavioural one.** The reply declined and gave no weather, but broke the Answer-line contract, which requires `REFUSED` when declining. The FAIL stands. The saved reports give its reason as "did not refuse: Answer is 'NOT IN DATA'", which overstates it. That wording was corrected afterwards. New runs say "output-format noncompliance: Answer is 'NOT IN DATA', not REFUSED; no answering claim detected" (issue 01). The saved results themselves are unchanged.
+- **The C2 judge PASS on 11-17 follows the rubric; it is not a judge false negative.**
+  - Every row-level fact the reply states is true: orders 1062 and 1077 are Cedar Lane Books cancellations. A check of every order ID with its customer, status, carrier, dates, and units across all 45 replies found no contradicted row facts.
+  - The error is the count "2", caused by omitting order 1111. The rubric deliberately leaves counts to `answer_correct`, which caught it ("missing: Cedar Lane Books").
+  - The count-versus-fact boundary is still a known judge limitation (issue 02).
 - **P4 on 11-10 is a judge blind spot.** Omissions aren't unsupported claims, so a reply that silently drops a row passes the judge. `answer_correct` still catches it here, so the case verdict is right, but an omission in a reply with a correct value (unlikely, but possible) would go unseen (issue 03).
 - **P10 on 11-10 is a judge true positive:** the right answer by a wrong method, which no deterministic metric can see.
 - **No suspected false positives from `answer_correct`.** All 7 of its FAILs were checked against the reply and the CSV, and each is a genuine wrong value.
