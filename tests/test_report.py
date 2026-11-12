@@ -72,7 +72,7 @@ def test_markdown_report_shows_every_required_per_case_field():
         "### P6 (Lookup): FLAG",
         "tallies Alder & Finch 2,",
         "### P10 (Lookup): ERROR",
-        "| response_quality | ERROR | - | 1 | judge error: judge output is not a single JSON object: 'not json' |",
+        "| response_quality | ERROR (not evaluated) | - | 1 | judge error: judge output is not a single JSON object: 'not json' |",
     ):
         assert expected in report, expected
 
@@ -92,13 +92,40 @@ def test_json_report_carries_the_same_run_as_structured_data():
     assert p1["expected"]["value"] == 8 and p1["expected"]["order_ids"][0] == 1082
     assert p1["response"] == "Counting rows with status open gives 7.\nAnswer: 7"
     assert p1["metrics"][0] == {
-        "metric": "answer_correct", "applies": True, "verdict": "FAIL", "score": 0.0, "threshold": 1.0,
+        "metric": "answer_correct", "applies": True, "evaluated": True, "verdict": "FAIL", "score": 0.0, "threshold": 1.0,
         "passed": False, "reason": "expected 8, got 7",
     }
     assert p1["judge"] == {"verdict": "PASS", "reason": "judge says PASS", "evidence": ["quote for P1"]}
     p3 = data["cases"][2]
     assert (p3["verdict"], p3["response"], p3["judge"]) == ("ERROR", None, None)
     assert [m["verdict"] for m in p3["metrics"]] == ["ERROR", None, "ERROR"]
+
+
+def test_a_deterministic_fail_with_a_judge_error_stays_fail_and_marks_the_judge_not_evaluated():
+    llm = ScriptedLLM(
+        expected_answers(SNAPSHOT),
+        replies={"P1": "Counting rows with status open gives 7.\nAnswer: 7"},
+        judgements={"P1": LLMError("Gemini API returned HTTP 503: unavailable")},
+    )
+    run = run_evals(SNAPSHOT, load_cases(), llm, ASSISTANT_MODEL, JUDGE_MODEL)
+
+    report = render_markdown(run)
+    p1 = json.loads(render_json(run))["cases"][0]
+
+    assert "### P1 (Count): FAIL" in report
+    assert "| answer_correct | FAIL | 0 | 1 | expected 8, got 7 |" in report
+    assert ("| response_quality | ERROR (not evaluated) | - | 1 | "
+            "judge error: Gemini API returned HTTP 503: unavailable |") in report
+    assert ("**Note:** FAIL comes from the deterministic metrics; response_quality was not evaluated "
+            "because the judge errored, so the judge neither passed nor failed this reply.") in report
+    quality = p1["metrics"][2]
+    assert (p1["verdict"], p1["judge"]) == ("FAIL", None)
+    assert (quality["verdict"], quality["evaluated"], quality["passed"], quality["score"]) == ("ERROR", False, None, None)
+    assert [m["evaluated"] for m in p1["metrics"]] == [True, False, False]
+
+
+def test_a_judged_case_has_no_not_evaluated_note():
+    assert "**Note:**" not in render_markdown(RUN).split("### P1 (Count)")[1].split("### P2")[0]
 
 
 def test_model_text_cannot_add_markdown_structure_to_the_report():

@@ -126,6 +126,12 @@ def _case_section(result: CaseResult) -> list[str]:
     if result.judged:
         evidence = "; ".join(_one_line(item) for item in result.judged.evidence) or "(none)"
         lines += [f"**Judge evidence:** {evidence}", ""]
+    if result.verdict == "FAIL" and any(m.metric == "response_quality" and m.verdict == "ERROR" for m in result.metrics):
+        lines += [
+            "**Note:** FAIL comes from the deterministic metrics; response_quality was not evaluated "
+            "because the judge errored, so the judge neither passed nor failed this reply.",
+            "",
+        ]
     if result.error:
         lines += [f"**Error:** {_one_line(result.error)}", ""]
     return lines
@@ -133,6 +139,8 @@ def _case_section(result: CaseResult) -> list[str]:
 
 def _metric_row(metric: MetricResult) -> str:
     verdict = metric.verdict if metric.applies else "n/a"
+    if verdict == "ERROR":
+        verdict = "ERROR (not evaluated)"
     score = "-" if metric.score is None else f"{metric.score:g}"
     threshold = "-" if metric.threshold is None else f"{metric.threshold:g}"
     return f"| {metric.metric} | {verdict} | {score} | {threshold} | {_cell(metric.reason)} |"
@@ -171,6 +179,7 @@ def _case_record(result: CaseResult) -> dict:
             {
                 "metric": m.metric,
                 "applies": m.applies,
+                "evaluated": m.applies and m.verdict != "ERROR",
                 "verdict": m.verdict,
                 "score": m.score,
                 "threshold": m.threshold,
