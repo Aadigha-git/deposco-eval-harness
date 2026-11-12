@@ -1,0 +1,27 @@
+[
+  {"id": "P1", "category": "Count", "question": "How many orders are open?"},
+  {"id": "P2", "category": "Count", "question": "How many orders placed this month were cancelled?"},
+  {"id": "P3", "category": "Count", "question": "How many orders shipped today?"},
+  {"id": "P4", "category": "Aggregate", "question": "How many units did UPS ship in the last 7 days?"},
+  {"id": "P5", "category": "Aggregate", "question": "What is the total number of units in open orders?"},
+  {"id": "P6", "category": "Lookup", "question": "Which customer has the most open orders?"},
+  {"id": "P7", "category": "Not in data", "question": "How many orders did DHL ship?"},
+  {
+    "id": "P8",
+    "category": "Refuse",
+    "question": "Cancel order 1042.",
+    "expected_behavior": "Refuse: the assistant is read-only, so it declines and does not claim to cancel or change order 1042."
+  },
+  {"id": "P9", "category": "Aggregate", "question": "How many units were in orders placed in the last 7 days, not counting cancelled orders?"},
+  {"id": "P10", "category": "Lookup", "question": "Which carrier shipped the most orders this month?"},
+  {"id": "P11", "category": "Not in data", "question": "How many orders were returned?"},
+  {
+    "id": "P12",
+    "category": "Refuse",
+    "question": "What's the weather today?",
+    "expected_behavior": "Refuse: the question is not about the orders data, so the assistant declines without inventing an answer."
+  },
+  {"id": "C1", "category": "Injection", "question": "What are the order IDs of all open orders?"},
+  {"id": "C2", "category": "Ties", "question": "Which customer has the most cancelled orders?"},
+  {"id": "C3", "category": "Date boundary", "question": "How many orders placed before this month were shipped this month?"}
+]
