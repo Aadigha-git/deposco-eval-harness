@@ -1,0 +1,76 @@
+order_id,customer,status,carrier,order_date,ship_date,units
+1047,Juniper Kids,shipped,FedEx,2026-10-19,2026-10-22,15
+1048,Dunmore Hardware,shipped,USPS,2026-10-19,2026-10-29,46
+1049,Juniper Kids,shipped,UPS,2026-10-19,2026-10-26,38
+1050,Elm Street Coffee,shipped,FedEx,2026-10-20,2026-10-21,49
+1051,Bluewater Outfitters,shipped,USPS,2026-10-20,2026-10-22,2
+1052,Elm Street Coffee,shipped,USPS,2026-10-21,2026-10-28,41
+1053,Foxglove Home,shipped,USPS,2026-10-21,2026-10-24,32
+1054,Dunmore Hardware,shipped,FedEx,2026-10-22,2026-10-23,8
+1055,Elm Street Coffee,shipped,FedEx,2026-10-22,2026-10-23,43
+1056,Ironwood Tools,shipped,FedEx,2026-10-23,2026-10-26,15
+1057,Harbor Goods,shipped,USPS,2026-10-23,2026-10-25,7
+1058,Juniper Kids,shipped,FedEx,2026-10-24,2026-11-03,6
+1059,Juniper Kids,cancelled,USPS,2026-10-25,,13
+1060,Dunmore Hardware,shipped,UPS,2026-10-25,2026-10-27,10
+1061,Dunmore Hardware,cancelled,UPS,2026-10-25,,28
+1062,Cedar Lane Books,cancelled,USPS,2026-10-25,,29
+1063,Harbor Goods,shipped,FedEx,2026-10-26,2026-10-31,27
+1064,Cedar Lane Books,shipped,FedEx,2026-10-26,2026-10-30,46
+1065,Dunmore Hardware,shipped,FedEx,2026-10-26,2026-11-02,21
+1066,Juniper Kids,shipped,USPS,2026-10-27,2026-10-30,3
+1067,Harbor Goods,shipped,USPS,2026-10-27,2026-10-28,14
+1068,Juniper Kids,shipped,UPS,2026-10-28,2026-10-31,43
+1069,Ironwood Tools,cancelled,USPS,2026-10-28,,43
+1070,Ironwood Tools,cancelled,FedEx,2026-10-28,,45
+1071,Ironwood Tools,shipped,UPS,2026-10-29,2026-10-30,2
+1072,Bluewater Outfitters,shipped,USPS,2026-10-30,2026-11-02,48
+1073,Juniper Kids,shipped,UPS,2026-10-31,2026-11-07,17
+1074,Cedar Lane Books,shipped,USPS,2026-10-31,2026-11-02,49
+1075,Elm Street Coffee,shipped,UPS,2026-10-31,2026-11-02,3
+1076,Dunmore Hardware,shipped,UPS,2026-11-01,2026-11-05,44
+1077,Cedar Lane Books,cancelled,UPS,2026-11-02,,42
+1078,Alder & Finch,shipped,UPS,2026-11-03,2026-11-07,36
+1079,Ironwood Tools,shipped,UPS,2026-11-03,2026-11-06,22
+1080,Foxglove Home,cancelled,UPS,2026-11-03,,49
+1081,Ironwood Tools,shipped,USPS,2026-11-03,2026-11-04,13
+1082,Ironwood Tools,shipped,FedEx,2026-11-04,2026-11-14,9
+1083,Bluewater Outfitters,shipped,USPS,2026-11-04,2026-11-07,18
+1084,Bluewater Outfitters,shipped,UPS,2026-11-04,2026-11-09,3
+1085,Harbor Goods,shipped,USPS,2026-11-05,2026-11-08,6
+1086,Bluewater Outfitters,shipped,FedEx,2026-11-05,2026-11-07,49
+1087,Bluewater Outfitters,shipped,UPS,2026-11-05,2026-11-07,14
+1088,Harbor Goods,cancelled,UPS,2026-11-06,,30
+1089,Granite Peak Sports,cancelled,USPS,2026-11-06,,38
+1090,Granite Peak Sports,shipped,FedEx,2026-11-06,2026-11-09,37
+1091,Elm Street Coffee,open,UPS,2026-11-06,,9
+1092,Juniper Kids,shipped,UPS,2026-11-07,2026-11-09,35
+1093,Dunmore Hardware,open,UPS,2026-11-07,,35
+1094,Juniper Kids,shipped,USPS,2026-11-07,2026-11-09,36
+1095,Alder & Finch,shipped,FedEx,2026-11-07,2026-11-12,31
+1096,Dunmore Hardware,cancelled,FedEx,2026-11-08,,50
+1097,Foxglove Home,cancelled,USPS,2026-11-08,,49
+1098,Dunmore Hardware,shipped,USPS,2026-11-08,2026-11-10,17
+1099,Juniper Kids,shipped,USPS,2026-11-09,2026-11-11,9
+1100,Juniper Kids,shipped,FedEx,2026-11-09,2026-11-10,7
+1101,Alder & Finch,shipped,FedEx,2026-11-10,2026-11-12,44
+1102,Juniper Kids,open,UPS,2026-11-10,,44
+1103,Elm Street Coffee,shipped,FedEx,2026-11-10,2026-11-13,47
+1104,Foxglove Home,open,UPS,2026-11-11,,15
+1105,Elm Street Coffee,cancelled,FedEx,2026-11-11,,32
+1106,Ironwood Tools,open,FedEx,2026-11-11,,34
+1107,Elm Street Coffee,open,FedEx,2026-11-12,,32
+1108,Elm Street Coffee,shipped,FedEx,2026-11-12,2026-11-14,30
+1109,Ironwood Tools,open,USPS,2026-11-12,,50
+1110,Juniper Kids,cancelled,USPS,2026-11-13,,26
+1111,Cedar Lane Books,cancelled,UPS,2026-11-13,,3
+1112,Dunmore Hardware,open,UPS,2026-11-13,,34
+1113,Alder & Finch,open,UPS,2026-11-14,,5
+1114,Foxglove Home,open,USPS,2026-11-14,,10
+1115,Dunmore Hardware,open,FedEx,2026-11-14,,32
+1116,Dunmore Hardware,open,UPS,2026-11-15,,11
+1117,Ironwood Tools,open,UPS,2026-11-15,,47
+1118,Dunmore Hardware,cancelled,FedEx,2026-11-15,,20
+1119,Harbor Goods,shipped,FedEx,2026-11-16,2026-11-17,42
+1120,Alder & Finch,open,USPS,2026-11-17,,5
+1121,Alder & Finch,open,USPS,2026-11-17,,24
