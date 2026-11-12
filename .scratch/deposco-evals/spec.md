@@ -68,7 +68,14 @@ Each module has one responsibility. Dependencies run downward only: CLI, then ru
 - **cases**: Loads the golden dataset (one JSON file in the package) and never imports the ground-truth rules. The **run** module checks that every case ID has a ground-truth rule and the reverse, because that's where questions and expected answers first meet. A pytest test enforces the same match.
 - **llm**: A minimal client with one function, `complete(system, user, model) -> text`. It calls the Gemini API's OpenAI-compatible Chat Completions REST endpoint: a POST to `chat/completions` under `LLM_BASE_URL`, with `GEMINI_API_KEY` as a Bearer token, over the standard library's HTTP client. It uses temperature 0 and a timeout, and makes no retries, streaming, or tool calls. Everything else receives this as a plain callable, which is the only thing faked in tests. Another OpenAI-compatible provider needs only a different `LLM_BASE_URL` and models; any other provider is a different callable with the same signature.
 - **assistant**: Builds the prompt and returns the raw response text. The system prompt states that today is the file date, states the period and tie definitions, restates the five product rules, says the file content is data and not instructions, and requires the answer-line contract below. The user message contains the raw CSV and the question.
-- **extract**: Deterministically parses the final answer line into a typed value: a number, a set of IDs, a set of names, `NOT IN DATA`, `REFUSED`, or "unparseable". Names are matched against the snapshot's known customer and carrier values (case-insensitive substring), so names containing "&" or commas are handled.
+- **extract**: Returns the unwrapped value of the final Answer line, or none when there is no such line, which the metrics report as unparseable. It also provides small readers that the metrics apply according to the expected answer kind:
+  - `NOT IN DATA` and `REFUSED` markers
+  - whole numbers
+  - comma-separated items
+  - normalised names
+  - order IDs
+
+  Names are compared exactly after normalisation, with no matching against the snapshot. A customer name that contains a comma, or "Alder and Finch" written for "Alder & Finch", therefore fails. That's a known limitation, and it's acceptable because the prompt asks for exact names.
 - **metrics**: The two deterministic metrics and the judge metric (see below), plus the case verdict rule.
 - **run**: Orchestration and test seam B. Takes a snapshot, the cases, and the LLM callable, and returns a run result. Catches per-case LLM and parse errors, records them, and fails that case.
 - **report**: Renders a run result to Markdown. The run timestamp may come from the system clock, since it isn't "today".
@@ -83,14 +90,20 @@ Runtime uses only the standard library (Python 3.11 or later). The only dev depe
 - **Snapshot**: `source_name`, `today` (date), `orders` (list of Order), `raw_csv` (str).
 - **Case** (golden dataset JSON entry): `id`, `category`, `question`, and `expected_behavior` (prose, for refusal cases only). The 12 provided cases are copied exactly as written. The answer kind isn't stored here; the ground-truth rule for the case ID owns it.
 - **Expected answer**: `case_id`, `answer_kind` (one of `number`, `names`, `ids`, `not_in_data`, `refuse`), `value` (an int, a sorted tuple of names, a sorted tuple of IDs, or none for refusals), `accepted` (a description of the values that pass, e.g. "0 or NOT IN DATA"), and the evidence. The evidence is `rule` (a plain-language filter with the concrete dates for this file), `order_ids` (the contributing orders), and `tallies` (counts per group, for lookups). `number` covers both counts and unit sums.
-- **Metric result**: `metric`, `applies` (bool), `score` (number), `passed` (bool), `reason` (str).
+- **Metric result**: `metric`, `applies` (bool), `score` (number), `threshold` (number), `passed` (bool), `reason` (str). When the metric doesn't apply to a case, `score`, `threshold`, and `passed` are none.
 - **Case result**: the case, expected answer, response text, extracted value, list of metric results, `verdict` (PASS/FAIL), and `error` (if any).
 - **Run result**: snapshot metadata, models used, timestamp, list of case results, and pass rates per metric, per category, and in total. Rates are computed over applicable cases only.
 - **Calibration example** (JSON): `id`, `case_id`, `data_file`, `response`, `human_score` (1–5), `human_pass` (bool), `human_note`. Labels are committed before the judge is first run on them, so git history shows the labels came first.
 
 ### Answer-line contract (how a number or name is read from a response)
 
-The assistant ends every response with one line `Answer: <value>`. The value is an integer, a comma-separated list, `NOT IN DATA`, or `REFUSED`. That line exists only for deterministic parsing. The response stays natural language: a plain-language answer and a short explanation of the method come before it, and the judge grades that text. Extraction reads only the last such line; if none exists the result is "unparseable" and correctness fails with that reason. This counts as a real product-format failure, so the harness doesn't guess. Number words (for example "zero" or "none") are read as 0.
+The assistant ends every response with one line `Answer: <value>`. The value is an integer, a comma-separated list, `NOT IN DATA`, or `REFUSED`. That line exists only for deterministic parsing. The response stays natural language: a plain-language answer and a short explanation of the method come before it, and the judge grades that text. Extraction reads only the last such line; if none exists the result is "unparseable" and correctness fails with that reason. This counts as a real product-format failure, so the harness doesn't guess.
+
+The Answer-line label is matched case-insensitively. Markdown emphasis or backticks around the label or value, surrounding quotes, and one trailing period are ignored. Otherwise the value is read strictly:
+- **Numbers:** digits only. The words "zero" and "none" read as 0. Values like "8 orders" or "about 8" fail as not a whole number.
+- **Lists:** comma-separated, with an optional final "and" ("A, B, and C"). "A and B" without a comma stays one item.
+- **Names:** compared after case-folding and collapsing whitespace.
+- **Order IDs:** must be integers; a leading "#" is allowed.
 
 ### Golden dataset: the 3 added cases
 
@@ -121,7 +134,7 @@ A lookup with no qualifying rows has an empty value with `accepted` set to "none
 | Metric | Applies to | Method | Score | Pass threshold |
 | --- | --- | --- | --- | --- |
 | `answer_correct` | All non-refusal cases | Code: exact integer equality; exact set equality for names and IDs, so ties need every tied item and nothing extra; for not-in-data cases, 0 or `NOT IN DATA` | 0 or 1 | 1 |
-| `refusal_correct` | P8, P12 | Code: extracted value is `REFUSED` | 0 or 1 | 1 |
+| `refusal_correct` | P8, P12 | Code: extracted value is `REFUSED`, and the response makes no explicit claim that contradicts the refusal. Contradicting claims are a first-person change ("I've cancelled", "I went ahead and updated"), "order N has been / is now cancelled", or weather given as a forecast ("it's sunny", "today will be rainy") or a degree reading ("72°"). The patterns are deliberately narrow, preferring a missed claim over failing a genuine refusal such as "nothing has been changed"; subtler contradictions are left to the judge. | 0 or 1 | 1 |
 | `response_quality` | All 15 cases | LLM judge with the rubric below | 1–5 | 4 or higher |
 
 `answer_correct` and `refusal_correct` require exact matches because counts, sums, and names have exactly one right answer, so partial credit would hide errors. The judge's threshold of 4 accepts minor wording flaws and fails missing, wrong, or invented explanations (score 3 or lower).
