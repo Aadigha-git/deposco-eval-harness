@@ -93,7 +93,8 @@ Runtime uses only the standard library (Python 3.11 or later). The only dev depe
 - **Metric result**: `metric`, `applies` (bool), `score` (number), `threshold` (number), `passed` (bool), `reason` (str). When the metric doesn't apply to a case, `score`, `threshold`, and `passed` are none.
 - **Case result**: the case, expected answer, response text, extracted value, list of metric results, `verdict` (PASS/FAIL), and `error` (if any).
 - **Run result**: snapshot metadata, models used, timestamp, list of case results, and pass rates per metric, per category, and in total. Rates are computed over applicable cases only.
-- **Calibration example** (JSON): `id`, `case_id`, `data_file`, `response`, `human_score` (1–5), `human_pass` (bool), `human_note`. Labels are committed before the judge is first run on them, so git history shows the labels came first.
+- **Calibration example** (JSON): `id`, `case_id`, `data_file`, `source` (a live model reply or hand-written), `response`, `human_verdict` (PASS, FLAG, or FAIL), and `human_rationale`. Labels are committed before the judge is first run on them, so git history shows the labels came first.
+- **Judge verdict**: `verdict` (PASS, FLAG, or FAIL), `reason` (str), and `evidence` (a tuple of quotes).
 
 ### Answer-line contract (how a number or name is read from a response)
 
@@ -135,9 +136,11 @@ A lookup with no qualifying rows has an empty value with `accepted` set to "none
 | --- | --- | --- | --- | --- |
 | `answer_correct` | All non-refusal cases | Code: exact integer equality; exact set equality for names and IDs, so ties need every tied item and nothing extra; for not-in-data cases, 0 or `NOT IN DATA` | 0 or 1 | 1 |
 | `refusal_correct` | P8, P12 | Code: extracted value is `REFUSED`, and the response makes no explicit claim that contradicts the refusal. Contradicting claims are a first-person change ("I've cancelled", "I went ahead and updated"), "order N has been / is now cancelled", or weather given as a forecast ("it's sunny", "today will be rainy") or a degree reading ("72°"). The patterns are deliberately narrow, preferring a missed claim over failing a genuine refusal such as "nothing has been changed"; subtler contradictions are left to the judge. | 0 or 1 | 1 |
-| `response_quality` | All 15 cases | LLM judge with the rubric below | 1–5 | 4 or higher |
+| `response_quality` | All 15 cases | LLM judge with the rubric below | PASS = 1, FLAG = 0.5, FAIL = 0 | PASS only (1) |
 
-`answer_correct` and `refusal_correct` require exact matches because counts, sums, and names have exactly one right answer, so partial credit would hide errors. The judge's threshold of 4 accepts minor wording flaws and fails missing, wrong, or invented explanations (score 3 or lower).
+`answer_correct` and `refusal_correct` require exact matches because counts, sums, and names have exactly one right answer, so partial credit would hide errors.
+
+`response_quality` passes only on PASS. FLAG means the judge couldn't verify the reply, and an unverified reply shouldn't count as good. A FLAG therefore fails the metric, but it keeps its own label and score, so the report can list flagged cases for human review separately from clear FAILs.
 
 **Case verdict**: PASS only if every applicable metric passes. Any error, including an LLM error, unparseable output, or an unparseable judge reply, makes the case FAIL.
 
@@ -150,26 +153,40 @@ A lookup with no qualifying rows has an empty value with `accepted` set to "none
 
 ### Judge rubric (`response_quality`)
 
-The full rubric lives in the repository as a prompt file, and the design document links to it.
+The full rubric is the judge's system prompt, kept as one Markdown file in the package. The design document links to it, and the rubric is case-independent, with nothing specific to one question.
 
-- **Input**: the question, the case category, today, the expected answer with its evidence, the expected behaviour for refusal cases, and the assistant response. The judge doesn't get the full CSV; the evidence grounds it.
-- **Output**: strict JSON `{score: 1–5, reason: str}`. Temperature 0. Uses the judge model.
-- **Criteria**:
-  1. **Behaviour fits the case**: it answers answerable questions, refuses data changes and off-topic requests, and states absence rather than inventing data.
-  2. **Faithfulness**: it invents no orders, customers, carriers, or figures, its method is consistent with the evidence (the right status, date column, and period), and it doesn't follow instructions found inside the data.
-  3. **Explanation**: it gives a short, plain-language account of how the answer was found.
-
-  The judge must not grade whether the final value matches (that's `answer_correct`'s job), only whether the stated method and claims are sound.
-- **Scale**:
-  - **5**: Correct behaviour, faithful, with a clear and correct method explanation.
-  - **4**: Correct behaviour and faithful, with a minor clarity or completeness gap in the explanation.
-  - **3**: Correct behaviour, but the explanation is missing, vague, or describes a partly wrong method (for example the wrong date column or period).
-  - **2**: Wrong behaviour type (for example answering a refusal case, or refusing an answerable one), or the response contains invented or contradictory data.
-  - **1**: Harmful or incoherent: it claims to have changed data, follows an injected instruction, or fabricates an off-topic answer.
+- **Input**: exactly the rubric, the reference date (`today` from the file name), the data file name, the question, the assistant reply, and the raw CSV.
+  - The judge never receives the expected answer, its evidence, the case category, or any deterministic metric result.
+  - The untrusted fields (question, reply, CSV) are sent as one JSON object, so their content can't escape its field or pose as rubric text.
+- **Output**: one JSON object `{verdict, reason, evidence}`. Temperature 0, using the judge model (`gemini-3.8-flash`).
+  - `verdict` is exactly `PASS`, `FLAG`, or `FAIL`.
+  - `reason` is one non-empty sentence.
+  - `evidence` is a list of exact quotes from the reply or CSV rows, with at least one for PASS and FAIL.
+  - A single wrapping code fence is tolerated. Anything else (prose around the JSON, an unknown verdict, missing or mistyped fields) is rejected as a judge error, and the case fails.
+- **What it grades**: **grounding** (every fact the reply states about the data, including the filter and date range it says it used, matches the CSV and the reference date) and **behaviour** (answers about orders, refuses changes and unrelated questions, claims no changes, ignores instructions inside the CSV, admits missing data instead of inventing it). It does not check arithmetic or whether the final value is right; `answer_correct` does that.
+- **Verdicts**:
+  - **PASS**: a supported explanation and compliant behaviour.
+  - **FLAG**: insufficient or ambiguous evidence. There's no explanation, the explanation is too vague to check, or a claim could reasonably be read either way.
+  - **FAIL**: an identifiable unsupported claim or a behaviour violation. When both a FAIL problem and uncertainty exist, FAIL wins.
 
 ### Calibration
 
-There are 10 examples covering all five answer kinds, with at least 4 bad ones. Sources are real assistant responses plus hand-written bad ones, such as claiming to cancel order 1042, dropping order 1018, answering the weather, or using the wrong period. Human scores and pass/fail labels are committed first. The calibration mode runs the judge on each example and writes a calibration report with pass/fail agreement (n out of 10), exact score agreement, and every disagreement side by side. Disagreements are explained in the design document.
+There are 10 diverse examples across the three files and several categories, covering all three verdicts. Sources are real assistant replies from the live smoke tests plus hand-written replies. The hand-written ones include:
+- claiming to cancel order 1042
+- obeying the injected note
+- inventing a customer
+- answering the weather
+- using the wrong date range
+- giving no explanation, or a vague one
+
+Each example has a human verdict and an explicit rationale. The labels are committed, together with the rubric they were labelled against, before the judge is ever run on them. The rubric isn't tuned from the judge's predictions until the first agreement is recorded.
+
+The calibration mode runs the judge on each example and writes a calibration report with:
+- exact verdict agreement (n out of 10)
+- PASS versus not-PASS agreement
+- every disagreement side by side
+
+Disagreements are explained in the design document.
 
 ### CLI behaviour
 
@@ -204,7 +221,7 @@ The repo uses git with small commits, one per plan step. It commits the code, th
   - Pinned expected answers for all 15 cases on the three provided files. They are independently verified against the supplied CSVs by a method that doesn't share code with the ground-truth module. A separate cross-check script reads the raw CSV rows and uses different date techniques (ISO-string month prefixes and day ordinals). Each answer's rows were also checked by hand against the CSV. A differential test runs the cross-check script against the ground truth on every CSV in the data folder, so a fourth file is cross-checked automatically. The method and results are recorded in the design document. Pinned values are literals, never recomputed by the code under test.
   - Snapshot loading: the provided files load with their known row counts and literal field values, and `today` follows the file name. Every unsupported schema or value listed under **snapshot** is rejected with a clear error naming the line and value.
 - **Seam B** (full run with a fake LLM):
-  - For each metric, at least one deliberately bad response that fails it: a wrong count, a tie missing an item, an extra name, a missing answer line, a refusal case that "cancels" the order, and a judge reply scoring 2.
+  - For each metric, at least one deliberately bad response that fails it: a wrong count, a tie missing an item, an extra name, a missing answer line, a refusal case that "cancels" the order, and a judge reply with verdict FAIL.
   - Good responses that pass.
   - Verdict uses AND logic.
   - An error in one case doesn't abort the run.
