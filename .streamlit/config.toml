@@ -6,10 +6,19 @@ secondaryBackgroundColor = "#F3F7F9"
 textColor = "#24323D"
 linkColor = "#1F5F99"
 borderColor = "#D9E4ED"
+codeTextColor = "#24323D"
+codeBackgroundColor = "#EEF1F4"
 font = "Archivo:https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap, sans-serif"
 headingFont = "Archivo:https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap, sans-serif"
 headingFontWeights = [700, 600, 600, 600, 600, 600]
 metricValueFontWeight = 600
+
+[theme.sidebar]
+backgroundColor = "#24323D"
+secondaryBackgroundColor = "#2D4150"
+textColor = "#F3F7F9"
+primaryColor = "#F48020"
+borderColor = "#3B4E5D"
 
 [client]
 toolbarMode = "viewer"

@@ -64,3 +64,24 @@ It computes nothing new about the assistant. Every number on the page is read fr
 - Deposco Dark Gray `#444444`
 
 Status colours always come with the status word, so meaning never relies on colour alone.
+
+## Revision: two-screen evaluation console
+
+The app has two screens, linked from a navy sidebar with native Streamlit navigation:
+
+- **Evaluation dashboard:** the same saved-data views, restyled with:
+  - a hero that shows the headline and the proportional verdict split
+  - snapshot cards
+  - tabs for the case grid, metrics and categories, answer versus reasoning, the case explorer, and calibration
+- **Assistant playground:** pick a CSV from `data/` and a golden case, or type your own question, then run the existing assistant live.
+  - `deposco_evals.playground` matches a typed question to a golden case, ignoring case and spacing.
+  - It runs `assistant.ask` through the existing client, parses the `Answer:` line, and for golden cases grades the reply with the existing `answer_correct` and `refusal_correct`. The judge isn't called.
+  - Live output is labelled "Live run, not saved" and is kept only in the session, shown beside the committed baseline verdict for the same case and snapshot.
+  - With no key, the page says how to set one and disables the run.
+  - API and snapshot errors show as an error message.
+
+**Tests:**
+- `ask_live` and `matching_case` are tested with a scripted LLM.
+- The page tests cover both screens, using `AppTest` with the fake client patched in at `make_complete`: no key, a golden case, a custom question, and an API failure.
+
+The evaluation engine, golden cases, rubric, metrics, and baseline reports are unchanged.
