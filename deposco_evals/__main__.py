@@ -58,10 +58,14 @@ def _write_together(paths: dict[Path, str]) -> None:
     """Writes every report to a temporary file first, so a failure never leaves a mismatched pair."""
     next(iter(paths)).parent.mkdir(parents=True, exist_ok=True)
     temporary = {path: path.with_name(path.name + ".tmp") for path in paths}
-    for path, text in paths.items():
-        temporary[path].write_text(text, encoding="utf-8")
-    for path in paths:
-        os.replace(temporary[path], path)
+    try:
+        for path, text in paths.items():
+            temporary[path].write_text(text, encoding="utf-8")
+        for path in paths:
+            os.replace(temporary[path], path)
+    finally:
+        for path in temporary.values():
+            path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

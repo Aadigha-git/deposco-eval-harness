@@ -10,6 +10,7 @@ from pathlib import Path
 from deposco_evals.cases import load_cases
 from deposco_evals.judge import RUBRIC, VERDICTS, JudgeOutputError, JudgeVerdict, judge_reply
 from deposco_evals.llm import LLMError, config_from_env, make_complete
+from deposco_evals.report import _no_html, _one_line
 from deposco_evals.snapshot import Snapshot, SnapshotError, load_snapshot
 
 Judge = Callable[[Snapshot, str, str], JudgeVerdict]
@@ -228,7 +229,7 @@ def _disagreement_section(prediction: Prediction) -> list[str]:
         "",
         f"Source: {label.source}",
         "",
-        *(f"> {line}" if line else ">" for line in label.response.splitlines()),
+        *(f"> {_no_html(line)}" if line else ">" for line in label.response.splitlines()),
         "",
         f"**Human rationale:** {_one_line(label.human_rationale)}",
         "",
@@ -255,11 +256,6 @@ def _prediction_record(prediction: Prediction) -> dict:
         "judge_raw_output": prediction.raw_output,
         "agrees": prediction.agrees,
     }
-
-
-def _one_line(text: str) -> str:
-    """Model and label text is shown on one line so it cannot add Markdown headings or lists."""
-    return " ".join(text.split())
 
 
 def _percent(part: int, whole: int) -> str:

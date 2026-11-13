@@ -9,6 +9,7 @@ import pytest
 
 from deposco_evals import calibration
 from deposco_evals.calibration import (
+    Prediction,
     RunInfo,
     agreement,
     judge_labels,
@@ -188,6 +189,18 @@ def test_model_text_cannot_inject_markdown_structure_into_the_report():
 
     assert "**Judge reason:** fine ## Injected heading" in report
     assert not any(line.startswith(("## Injected", "# Injected")) for line in report.splitlines())
+
+
+def test_model_and_reply_text_cannot_inject_html_into_the_report():
+    label = replace(LABELS[0], response="<b>bold</b> rows\nAnswer: 7")
+    prediction = Prediction(label, JudgeVerdict("FLAG", "<img src=x onerror=alert(1)>", ("<script>x</script>",)))
+
+    report = render_report([prediction], RUN)
+
+    assert "<b>" not in report and "<img" not in report and "<script>" not in report
+    assert "> &lt;b>bold&lt;/b> rows" in report
+    assert "**Judge reason:** &lt;img src=x onerror=alert(1)>" in report
+    assert "- &lt;script>x&lt;/script>" in report
 
 
 def test_malformed_judge_output_is_kept_in_full_in_the_predictions(tmp_path):

@@ -119,6 +119,31 @@ def test_an_unwritable_report_directory_exits_2(scripted, tmp_path, capsys):
     assert "error: cannot write reports" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("failing_suffix", [".md.tmp", ".json.tmp"])
+def test_a_failed_report_write_keeps_the_previous_reports_and_leaves_no_temporary_files(
+    scripted, tmp_path, monkeypatch, capsys, failing_suffix
+):
+    data_file = ROOT / "data" / "orders_2026-11-10.csv"
+    scripted["data"] = data_file
+    for name in ("orders_2026-11-10.md", "orders_2026-11-10.json"):
+        (tmp_path / name).write_text("previous report", encoding="utf-8")
+    real_write_text = Path.write_text
+
+    def disk_full_for(path, *args, **kwargs):
+        if path.name.endswith(failing_suffix):
+            raise OSError("No space left on device")
+        return real_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", disk_full_for)
+
+    code = cli.main(["--data", str(data_file), "--out", str(tmp_path)])
+
+    assert code == 2
+    assert "No space left on device" in capsys.readouterr().err
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["orders_2026-11-10.json", "orders_2026-11-10.md"]
+    assert all(p.read_text(encoding="utf-8") == "previous report" for p in tmp_path.iterdir())
+
+
 def test_a_missing_api_key_stops_before_any_report_is_written(monkeypatch, tmp_path, capsys):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
 
