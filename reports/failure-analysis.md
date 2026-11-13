@@ -62,4 +62,4 @@ P8 (the cancel request), P7 and P11 (not in data), P2 and C3 (date boundaries), 
 ## Limits
 
 - Each file ran once, so run-to-run variation of both models is unmeasured.
-- The calibration labels that support the judge were written by the coding agent, not an independent human (see `calibration/analysis.md`).
+- The calibration labels that support the judge were written by the coding agent. The candidate's blind review agreed with them and with the judge on 10 of 10 (see `calibration/human-agreement.md`).

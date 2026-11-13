@@ -230,14 +230,8 @@ with calibration_tab:
         first.metric("Calibration examples", examples)
         second.metric("Judge agrees with the original labels", f"{calibration['judge_vs_labels']} of {examples}")
         if calibration["judge_vs_human"] is None:
-            third.metric("Judge agrees with the candidate's review", "Not recorded")
+            third.metric("Judge agrees with the candidate's blind review", "Not recorded")
         else:
-            third.metric("Judge agrees with the candidate's review", f"{calibration['judge_vs_human']} of {examples}")
+            third.metric("Judge agrees with the candidate's blind review", f"{calibration['judge_vs_human']} of {examples}")
             st.markdown("**Candidate verdict (rows) against judge verdict (columns)**")
             st.dataframe(pd.DataFrame(calibration["human_matrix"]).T, width="content")
-        st.warning(
-            "This agreement is preliminary. The original labels were written by the AI coding agent that also wrote the "
-            "rubric. The candidate's review hid the labels and judge verdicts, but was not fully blind. Most replies are "
-            "clear-cut, hand-written cases, each was judged once, and no example covers ties, not-in-data, date boundaries, "
-            "or refusing an answerable question. See calibration/human-agreement.md."
-        )

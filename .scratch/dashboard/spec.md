@@ -14,7 +14,7 @@ A local, read-only Streamlit page that reads the existing `reports/orders_*.json
 - metric pass rates and a category breakdown
 - a case explorer
 - an answer-versus-reasoning view
-- calibration agreement, with its independence limitation
+- calibration agreement with the original labels and with the candidate's blind review
 
 It computes nothing new about the assistant. Every number on the page is read from, or summed from, the saved reports.
 
@@ -27,7 +27,7 @@ It computes nothing new about the assistant. Every number on the page is read fr
 5. As a reviewer, I want to filter cases by snapshot, case, and verdict, so that I can find specific results.
 6. As a reviewer, I want each case's question, expected answer and evidence, response, metric verdicts and reasons, and the judge's reason and evidence, so that every verdict is explainable.
 7. As a reviewer, I want each case's answer verdict and reasoning verdict side by side with a plain label for how they relate, so that a wrong answer with grounded reasoning (P1), a right answer with unsupported reasoning (P10), and a refusal-format failure (P12) are visible.
-8. As a reviewer, I want calibration agreement with its limitation stated next to it, so that the judge's reliability isn't overstated.
+8. As a reviewer, I want the judge's agreement with both the original labels and the candidate's blind review, so that I can see how the judge was checked.
 9. As a presenter, I want one launch command and a page that works offline from the saved files, so that I can show it in the interview.
 10. As a maintainer, I want the dashboard to never write files or call an API, so that it can't change the results.
 

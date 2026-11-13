@@ -8,7 +8,7 @@ This repository contains three things:
 **Baseline result:** 34 of 45 cases passed over the three snapshots (87%, 67%, and 73%). The failures are real assistant errors, such as off-by-one counts and dropped rows. They're explained in [`reports/failure-analysis.md`](reports/failure-analysis.md).
 
 **Where to look:**
-- [`DESIGN.md`](DESIGN.md) (also as a 4-page [`DESIGN.pdf`](DESIGN.pdf)): the architecture, the eight assignment decisions, the metrics, the judge rubric and calibration, the findings, and the limitations
+- [`DESIGN.md`](DESIGN.md) (also as [`DESIGN.pdf`](DESIGN.pdf)): the architecture, the eight assignment decisions, the metrics, the judge rubric and calibration, the findings, and the limitations
 - [`reports/`](reports/): one Markdown and one JSON report per snapshot
 - [`calibration/report.md`](calibration/report.md): the judge's agreement with hand labels
 

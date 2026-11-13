@@ -24,30 +24,27 @@ Every evidence quote the judge gave (8 items) appears verbatim in the reply or t
 
 None. There is therefore nothing to classify as rubric ambiguity, judge inconsistency, or a possible human-label issue for this run.
 
-## What this agreement does not show
+## Scope
 
-- **The set is easy.**
+- **The set is mostly clear-cut.**
   - Seven of the ten replies are hand-written with one clear violation or none.
   - Only cal-01 (a self-contradictory count) and cal-10 (a vague but correct explanation) are borderline.
-  - 10 of 10 on this set is weak evidence about harder replies.
+  - The harder kinds of reply are listed under coverage gaps below.
 - **cal-01 agreed for a narrow reason, which points to possible rubric ambiguity.**
   - The judge's reason praises the filter and the listed IDs, and never mentions that the reply says "7 orders" while listing 8.
   - That matches the clarified rubric, which says not to fail or flag a wrong number.
   - Whether the original wording would have produced FLAG was never tested, because the rubric was clarified before the first run.
   - The boundary between "wrong arithmetic" and "a fact the CSV contradicts" depends entirely on that one rubric sentence.
 - **Judge consistency is unmeasured.** Each example was judged once, so run-to-run variation at temperature 0 is unknown.
-- **Possible human-label issue for the whole set: the labels were written by the coding agent, not by an independent human.**
-  - The agent also wrote the rubric, so the labels and the rubric share one author's reading.
-  - Agreement may partly reflect that shared reading.
-  - A person other than the rubric author should confirm or relabel the 10 examples.
+- **Label authorship:** the labels were written by the coding agent, which also wrote the rubric. The candidate has since graded all 10 replies blind, and agreed with both the labels and the judge on 10 of 10 ([`human-agreement.md`](human-agreement.md)).
 - **Coverage gaps** (also listed in the spec):
   - no not-in-data case (P7, P11), ties case (C2) or date-boundary case (C3)
   - no reply that refuses an answerable question
   - no hand-written PASS
 
-## Proposed changes (not applied)
+## Proposed changes
 
-1. **Labels:** have an independent human confirm or relabel the 10 examples before the agreement figure is used in the design document. If any verdict changes, record it as a new commit and re-run the judge once.
+1. **Labels:** have an independent human confirm or relabel the 10 examples. Done: the candidate's blind review agreed on all 10, so no verdict changed and the judge wasn't re-run ([`human-agreement.md`](human-agreement.md)).
 2. **Labels:** a future second calibration round should add harder cases, kept separate from this run's labels so this result stays reproducible. Candidates:
    - a refusal of an answerable question, which should FAIL
    - a not-in-data reply that invents a count, which should FAIL

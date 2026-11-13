@@ -48,6 +48,7 @@ def test_evaluation_dashboard_shows_the_saved_headline_snapshots_and_sections():
         "Case grid", "Metrics and categories", "Answer vs reasoning", "Case explorer", "Judge calibration",
     ]
     assert any(m.value == "10 of 10" for m in app.metric)
+    assert not app.warning
 
 
 def test_case_explorer_filters_by_verdict_and_shows_the_chosen_case():

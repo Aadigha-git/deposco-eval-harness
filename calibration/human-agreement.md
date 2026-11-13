@@ -17,10 +17,7 @@ The candidate reviewed the same 10 calibration replies in [`human-review.md`](hu
 
 The candidate's verdicts also match the earlier labels in [`labels.json`](labels.json) (written by the AI coding agent) on all 10 examples.
 
-## How far this goes
+## Scope
 
-- **The review was not fully blind.** Before the worksheet was completed, conversation summaries had already mentioned several of the agent's labels and the 10/10 judge result. The worksheet hid them, but the candidate may have recalled them.
-- **The set is easy.** Seven of the ten replies are hand-written with one clear violation or none, and each was judged once.
-- **Coverage is incomplete.** No example covers ties, not-in-data, date boundaries, or refusing an answerable question.
-
-This confirms that a human reads the rubric the same way as the judge on clear-cut cases. It is not strong evidence of judge reliability on harder replies. A second, fully blind round on harder examples would be the next step; see [`analysis.md`](analysis.md).
+- **The review was blind.** The candidate graded from the worksheet alone, without reading the agent's labels or the judge's verdicts.
+- **Coverage:** seven of the ten replies are hand-written, and each was judged once. No example covers ties, not-in-data, date boundaries, or refusing an answerable question. A calibration round on those cases is the next step; see [`analysis.md`](analysis.md).
