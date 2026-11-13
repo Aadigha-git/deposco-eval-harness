@@ -22,6 +22,13 @@ All 313 tests run offline; the dashboard page tests are skipped unless the `dash
 
 One test also patches `answer_correct` to raise an error, to show that a grading bug in one case is recorded as ERROR without losing the rest of the run.
 
+## Rubrics and grading rules in this repository
+
+- **Judge rubric:** [`deposco_evals/judge_rubric.md`](deposco_evals/judge_rubric.md) is the exact text sent to the judge, with the PASS, FLAG, and FAIL definitions.
+- **Deterministic metrics:** [`deposco_evals/metrics.py`](deposco_evals/metrics.py) holds `answer_correct` and `refusal_correct`, and [`deposco_evals/extract.py`](deposco_evals/extract.py) holds the `Answer:` parsing rules.
+- **Expected answers:** [`deposco_evals/ground_truth.py`](deposco_evals/ground_truth.py) has one rule per case. The cases themselves are in [`deposco_evals/golden_cases.json`](deposco_evals/golden_cases.json), and [`scripts/crosscheck_expected.py`](scripts/crosscheck_expected.py) is the independent cross-check.
+- **Calibration labels:** [`calibration/labels.json`](calibration/labels.json) has the 10 hand labels, each with a rationale.
+
 ## The eight decisions
 
 ### 1. Golden dataset format and how a case connects to its expected answer
