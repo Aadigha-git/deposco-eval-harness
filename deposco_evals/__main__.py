@@ -55,7 +55,10 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _write_together(paths: dict[Path, str]) -> None:
-    """Writes every report to a temporary file first, so a failure never leaves a mismatched pair."""
+    """Writes every report to a temporary file first and swaps them in, removing the temporary files on failure.
+
+    shortcut: a failure between the two swaps can still leave a new Markdown report next to the old JSON one.
+    """
     next(iter(paths)).parent.mkdir(parents=True, exist_ok=True)
     temporary = {path: path.with_name(path.name + ".tmp") for path in paths}
     try:
