@@ -20,6 +20,9 @@ textColor = "#F3F7F9"
 primaryColor = "#F48020"
 borderColor = "#3B4E5D"
 
+[server]
+address = "127.0.0.1"  # the playground spends the local GEMINI_API_KEY, so don't serve it to the network
+
 [client]
 toolbarMode = "viewer"
 

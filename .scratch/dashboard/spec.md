@@ -76,12 +76,17 @@ The app has two screens, linked from a navy sidebar with native Streamlit naviga
 - **Assistant playground:** pick a CSV from `data/` and a golden case, or type your own question, then run the existing assistant live.
   - `deposco_evals.playground` matches a typed question to a golden case, ignoring case and spacing.
   - It runs `assistant.ask` through the existing client, parses the `Answer:` line, and for golden cases grades the reply with the existing `answer_correct` and `refusal_correct`. The judge isn't called.
-  - Live output is labelled "Live run, not saved" and is kept only in the session, shown beside the committed baseline verdict for the same case and snapshot.
+  - Live output is labelled "Live run on <file>, not saved" and is kept only in the session. It is marked as stale once the question or snapshot changes.
+  - Below it, a separate panel shows the committed baseline for the same case and snapshot: the saved answer verdict, which is the one to compare with the live check, and the saved final verdict, which also counts the judge.
   - With no key, the page says how to set one and disables the run.
-  - API and snapshot errors show as an error message.
+  - API and snapshot errors, including a CSV that isn't UTF-8, show as an error message.
+- The server listens on `127.0.0.1` only, because the playground spends the local API key.
+- This revision supersedes "a single Streamlit script" and "a little CSS only for the status badges" above: the app is `dashboard.py` plus `dashboard_pages/`, with a small shared stylesheet for the hero, cards, badges, and live/saved panels. User story 10 now applies to the evaluation dashboard only; the playground makes live calls but still never writes files.
 
 **Tests:**
 - `ask_live` and `matching_case` are tested with a scripted LLM.
-- The page tests cover both screens, using `AppTest` with the fake client patched in at `make_complete`: no key, a golden case, a custom question, and an API failure.
+- The page tests cover both screens, using `AppTest` with the fake client patched in at `make_complete`:
+  - no key, a golden case, a custom question, an API failure, and an unreadable snapshot
+  - escaped metric reasons, the saved answer verdict, a stale result, and a malformed calibration file
 
 The evaluation engine, golden cases, rubric, metrics, and baseline reports are unchanged.

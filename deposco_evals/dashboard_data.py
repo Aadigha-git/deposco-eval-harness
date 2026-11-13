@@ -11,7 +11,9 @@ REQUIRED_FIELDS = ("data_file", "reference_date", "assistant_model", "judge_mode
 VERDICTS = ("PASS", "FLAG", "FAIL", "ERROR")
 JUDGE_VERDICTS = ("PASS", "FLAG", "FAIL")
 DETERMINISTIC_METRICS = ("answer_correct", "refusal_correct")
-HUMAN_VERDICT = re.compile(r"^## Example \d+ of 10: (cal-\d+)$.*?^- Verdict \(PASS / FLAG / FAIL\):([^\n]*)$", re.M | re.S)
+HUMAN_VERDICT = re.compile(r"^## Example \d+ of \d+: (cal-\d+)$.*?^- Verdict \(PASS / FLAG / FAIL\):([^\n]*)$", re.M | re.S)
+# refusal_correct reasons for a decline that used the wrong marker; the saved reports predate the first wording.
+FORMAT_ONLY_REFUSAL = ("output-format noncompliance", "did not refuse: Answer is 'NOT IN DATA'")
 
 
 def load_reports(directory: str | Path) -> list[dict]:
@@ -90,7 +92,7 @@ def relation(answer: dict | None, reasoning: dict | None) -> str:
         return "Both passed" if answer_verdict == "PASS" else "Both failed"
     if answer_verdict == "PASS":
         return "Right answer, unsupported reasoning"
-    if answer["metric"] == "refusal_correct" and "NOT IN DATA" in answer["reason"]:
+    if answer["metric"] == "refusal_correct" and answer["reason"].startswith(FORMAT_ONLY_REFUSAL):
         return "Refusal format failed, behaviour compliant"
     return "Wrong answer, grounded reasoning"
 

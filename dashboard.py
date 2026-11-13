@@ -5,6 +5,8 @@ Run from the repository root: streamlit run dashboard.py
 
 import streamlit as st
 
+from dashboard_pages.common import pill_css
+
 st.set_page_config(page_title="Deposco evaluation console", layout="wide", initial_sidebar_state="expanded")
 
 st.html("""
@@ -25,8 +27,6 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .answer-value { font-family: Archivo, sans-serif; font-size: 2rem; font-weight: 600; color: #24323D; }
 .big-rate { font-family: Archivo, sans-serif; font-size: 2.2rem; font-weight: 600; color: #24323D; line-height: 1.1; }
 .pill { display: inline-block; padding: 0.05rem 0.55rem; border-radius: 999px; font-weight: 600; font-size: 0.85rem; }
-.pill-PASS { color: #1B5E3F; background: #E3F1EA; } .pill-FLAG { color: #7A4300; background: #FCEBD3; }
-.pill-FAIL { color: #9F1D16; background: #FBE4E1; } .pill-ERROR { color: #444444; background: #E9ECEF; }
 .source-tag { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
 .source-live { color: #1F5F99; background: #E2ECF4; } .source-saved { color: #444444; background: #EEF1F4; }
 .st-key-live-output { border-left: 4px solid #4797D8; padding-left: 1rem; animation: rise 0.3s ease-out both; }
@@ -35,6 +35,7 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 @media (prefers-reduced-motion: reduce) { .st-key-hero, .st-key-live-output { animation: none; } }
 </style>
 """)
+st.html(f"<style>{pill_css()}</style>")
 
 st.sidebar.markdown("### Evaluation console")
 st.sidebar.caption("Deposco orders assistant. Saved baseline results and a live playground.")

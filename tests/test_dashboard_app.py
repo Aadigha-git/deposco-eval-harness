@@ -95,14 +95,24 @@ def test_an_errored_case_can_be_inspected(tmp_path):
     assert "Gemini API timed out after 120s" in text(app, "warning")
 
 
-def playground(monkeypatch, api_key=True, complete=None):
+def test_a_malformed_calibration_file_is_reported_rather_than_called_missing(tmp_path):
+    app = app_with(tmp_path)
+    (tmp_path / "calibration" / "predictions.json").write_text("{", encoding="utf-8")
+    app.run()
+
+    assert not app.exception
+    assert "Could not read the calibration results" in text(app, "error")
+    assert "No calibration results found" not in text(app, "info")
+
+
+def playground(monkeypatch, api_key=True, complete=None, app=None):
     if api_key:
         monkeypatch.setenv("GEMINI_API_KEY", "test-key-not-real")
     else:
         monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     if complete is not None:
         monkeypatch.setattr(llm, "make_complete", lambda config: complete)
-    app = AppTest.from_file(APP, default_timeout=30).run()
+    app = (AppTest.from_file(APP, default_timeout=30) if app is None else app).run()
     return app.switch_page(PLAYGROUND).run()
 
 
@@ -154,3 +164,49 @@ def test_playground_shows_an_api_failure_as_a_clear_error(monkeypatch):
 
     assert not app.exception
     assert "The live run failed: Gemini API returned HTTP 401: API key not valid." in text(app, "error")
+
+
+def test_playground_escapes_model_text_quoted_in_a_metric_reason(monkeypatch):
+    snapshot = load_snapshot(ROOT / "data" / "orders_2026-11-17.csv")
+    app = playground(monkeypatch, complete=ScriptedLLM(expected_answers(snapshot), replies={"P1": "Answer: <value>"}))
+
+    app.button[0].click().run()
+
+    assert "&lt;value&gt;&#x27; is not a whole number" in text(app)
+    assert "<value>" not in text(app)
+
+
+def test_playground_compares_the_live_answer_check_with_the_saved_answer_check(monkeypatch):
+    snapshot = load_snapshot(ROOT / "data" / "orders_2026-11-10.csv")
+    app = playground(monkeypatch, complete=ScriptedLLM(expected_answers(snapshot)))
+    app.selectbox[0].select("orders_2026-11-10.csv").run()
+    app.selectbox[1].select(next(c for c in app.selectbox[1].options if c.startswith("P10:"))).run()
+
+    app.button[0].click().run()
+
+    page = text(app)
+    assert not app.exception
+    assert '<span class="pill pill-PASS">PASS</span> `answer_correct`' in page
+    assert ('saved answer verdict <span class="pill pill-PASS">PASS</span> and final verdict '
+            '<span class="pill pill-FAIL">FAIL</span>') in page
+
+
+def test_playground_marks_a_live_result_as_stale_once_the_question_changes(monkeypatch):
+    snapshot = load_snapshot(ROOT / "data" / "orders_2026-11-17.csv")
+    app = playground(monkeypatch, complete=ScriptedLLM(expected_answers(snapshot)))
+    app.button[0].click().run()
+
+    app.selectbox[1].select(next(c for c in app.selectbox[1].options if c.startswith("P2:"))).run()
+
+    assert "This result is for an earlier question or snapshot" in text(app, "warning")
+
+
+def test_playground_shows_an_unreadable_snapshot_as_a_clear_error(monkeypatch, tmp_path):
+    app = app_with(tmp_path)
+    (tmp_path / "data" / "orders_2026-12-01.csv").write_bytes("order_id,customer\n1,Café\n".encode("latin-1"))
+    app = playground(monkeypatch, complete=lambda system, user, model: "Answer: 1", app=app)
+
+    app.button[0].click().run()
+
+    assert not app.exception
+    assert "The live run failed" in text(app, "error")

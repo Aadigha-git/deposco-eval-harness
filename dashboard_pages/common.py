@@ -16,6 +16,11 @@ def pill(verdict: str | None) -> str:
     return f'<span class="pill pill-{verdict}">{verdict}</span>' if verdict in STATUS_STYLE else "n/a"
 
 
+def pill_css() -> str:
+    """Pill classes generated from STATUS_STYLE (Markdown strips inline styles, so pills need classes)."""
+    return "\n".join(f".pill-{verdict} {{ {style}; }}" for verdict, style in STATUS_STYLE.items())
+
+
 def status_table(rows: list[dict], status_columns: list[str], **kwargs):
     frame = pd.DataFrame(rows)
     styled = frame.style.map(lambda v: STATUS_STYLE.get(v, ""), subset=status_columns)

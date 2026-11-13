@@ -105,22 +105,22 @@ A two-screen Streamlit app for presenting the results. It's read-only unless you
   It makes no API calls.
 - **Assistant playground:** ask the live assistant one question about any CSV in `data/`, either a golden case or your own question.
   - It shows the reply and its parsed `Answer:` line.
-  - For a golden case, it also shows the expected answer, the deterministic metric verdicts, and the saved baseline verdict for comparison.
+  - For a golden case, it also shows the expected answer and the deterministic metric verdicts. Below that, a separate panel shows the saved baseline's answer verdict and final verdict for the same case and snapshot.
   - Live runs are labelled as such, never saved, and never change the reports. The judge isn't called.
   - Without `GEMINI_API_KEY`, the page explains how to set it and the run button stays disabled.
 
 ```bash
 pip install -e '.[dashboard]'                       # adds Streamlit; the harness itself stays dependency-free
 set -a; source .env; set +a                         # optional: only needed for live playground runs
-streamlit run dashboard.py                          # from the repository root; opens http://localhost:8501
+streamlit run dashboard.py                          # from the repository root; opens http://127.0.0.1:8501
 ```
 
-Run it from the repository root so the theme in `.streamlit/config.toml` applies. The dashboard reads `reports/` on every page load, so a new `python -m deposco_evals` run appears after a refresh. Its tests run with `pytest`, and the page tests are skipped when Streamlit isn't installed.
+Run it from the repository root so `.streamlit/config.toml` applies: it sets the theme and serves the app on `127.0.0.1` only, so nobody else on the network can spend your key. The dashboard reads `reports/` on every page load, so a new `python -m deposco_evals` run appears after a refresh. Its tests run with `pytest`, and the page tests are skipped when Streamlit isn't installed.
 
 **A two-minute demo:**
 1. **Evaluation dashboard:** read the headline (34 of 45) and the snapshot cards, then open **Answer vs reasoning** to show:
    - P1: the right orders but a wrong count
    - P10: a right answer by a wrong method
    - P12: the right behaviour but the wrong marker
-2. **Assistant playground:** pick `orders_2026-11-17.csv` and golden case P1, then select **Run assistant**. Compare the live parsed answer and its `answer_correct` verdict with the saved baseline verdict shown below it.
+2. **Assistant playground:** pick `orders_2026-11-17.csv` and golden case P1, then select **Run assistant**. Compare the live parsed answer and its `answer_correct` verdict with the saved answer verdict shown below it. Live replies vary from run to run, so a live PASS next to a saved FAIL is a reminder that the baseline is three single runs, not a fixed property of the model.
 3. Switch to **Your own question** and ask something new. It's answered live but not graded, because no expected answer exists.

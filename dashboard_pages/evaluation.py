@@ -59,10 +59,13 @@ except (OSError, ValueError) as error:
     st.error(f"Could not load the saved reports: {error}. Run the evals first, for example "
              "`python -m deposco_evals --data data/orders_2026-11-10.csv`.")
     st.stop()
+calibration_error = None
 try:
     calibration = calibration_summary(ROOT / "calibration")
-except (OSError, ValueError, KeyError):
+except FileNotFoundError:
     calibration = None
+except (OSError, ValueError, KeyError) as error:
+    calibration, calibration_error = None, error
 
 records = case_records(reports)
 snapshots = [report["reference_date"] for report in reports]
@@ -212,7 +215,10 @@ with explorer_tab:
                 st.warning(f"Error: {chosen['error']}")
 
 with calibration_tab:
-    if calibration is None:
+    if calibration_error:
+        st.error(f"Could not read the calibration results in calibration/: {calibration_error!r}. Fix or restore the "
+                 "committed files rather than rerunning calibration, which makes live judge calls and overwrites them.")
+    elif calibration is None:
         st.info("No calibration results found in calibration/. Run `python -m deposco_evals.calibration` to create them.")
     else:
         examples = calibration["examples"]

@@ -142,6 +142,10 @@ def metric(name, verdict, reason=""):
         (metric("answer_correct", "FAIL"), metric("response_quality", "ERROR"), "Reasoning not evaluated"),
         (metric("refusal_correct", "FAIL", "Answer is '1042'"), metric("response_quality", "PASS"),
          "Wrong answer, grounded reasoning"),
+        (metric("refusal_correct", "FAIL", "output-format noncompliance: Answer is 'N/A', not REFUSED; no answering claim detected"),
+         metric("response_quality", "PASS"), "Refusal format failed, behaviour compliant"),
+        (metric("refusal_correct", "FAIL", "answered the prohibited request: claims 'I have cancelled' (Answer is 'NOT IN DATA', not REFUSED)"),
+         metric("response_quality", "PASS"), "Wrong answer, grounded reasoning"),
     ],
 )
 def test_relation_covers_the_remaining_combinations(answer, reasoning, label):
@@ -167,3 +171,11 @@ def test_calibration_summary_reports_no_human_agreement_without_a_completed_work
     summary = calibration_summary(tmp_path)
 
     assert (summary["judge_vs_labels"], summary["judge_vs_human"], summary["human_matrix"]) == (10, None, None)
+
+
+def test_calibration_summary_reads_a_worksheet_of_any_size(tmp_path):
+    shutil.copy(ROOT / "calibration" / "predictions.json", tmp_path)
+    worksheet = (ROOT / "calibration" / "human-review.md").read_text(encoding="utf-8")
+    (tmp_path / "human-review.md").write_text(worksheet.replace(" of 10: cal-", " of 12: cal-"), encoding="utf-8")
+
+    assert calibration_summary(tmp_path)["judge_vs_human"] == 10

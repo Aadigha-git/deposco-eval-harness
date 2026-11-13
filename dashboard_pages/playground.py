@@ -9,8 +9,8 @@ from dashboard_pages.common import pill
 from deposco_evals.cases import load_cases
 from deposco_evals.dashboard_data import case_records, load_reports
 from deposco_evals.llm import LLMError, config_from_env, make_complete
-from deposco_evals.playground import ask_live, matching_case
-from deposco_evals.snapshot import SnapshotError, load_snapshot
+from deposco_evals.playground import ask_live
+from deposco_evals.snapshot import load_snapshot
 
 ROOT = Path(__file__).resolve().parent.parent  # pages run from disk, so this follows the copy being run
 
@@ -60,7 +60,7 @@ if run:
         with output_column, st.spinner(f"Asking {config.assistant_model}…"):
             st.session_state.live = (snapshot, ask_live(snapshot, question, cases, make_complete(config), config.assistant_model))
         st.session_state.pop("live_error", None)
-    except (LLMError, SnapshotError) as error:
+    except (LLMError, ValueError, OSError) as error:  # SnapshotError and UnicodeDecodeError are ValueErrors
         st.session_state.live_error = str(error)
         st.session_state.pop("live", None)
 
@@ -74,6 +74,8 @@ with output_column:
                         "`Answer:` line and, for golden cases, the expected answer and metric verdicts appear here.")
     else:
         snapshot, result = st.session_state.live
+        if result.question != question or snapshot.source_name != data_file.name:
+            st.warning("This result is for an earlier question or snapshot. Select **Run assistant** to ask the current one.")
         with st.container(key="live-output"):
             st.markdown(f'<span class="source-tag source-live">Live run on {snapshot.source_name}, not saved</span>',
                         unsafe_allow_html=True)
@@ -87,23 +89,26 @@ with output_column:
             if result.case:
                 st.markdown(f"**Golden case {result.case.id}.** Expected answer: {result.expected.accepted}")
                 for metric in result.metrics:
-                    st.markdown(f"{pill(metric.verdict)} `{metric.metric}`: {metric.reason}", unsafe_allow_html=True)
+                    st.markdown(f"{pill(metric.verdict)} `{metric.metric}`: {html.escape(metric.reason)}",
+                                unsafe_allow_html=True)
                 st.caption("Only the deterministic metrics run here; the judge is not called in the playground.")
             else:
                 st.caption("Not a golden case, so there is no expected answer to compare with.")
 
-        saved_case = matching_case(result.question, cases)
         saved = None
-        if saved_case:
+        if result.case:
             try:
                 saved = next((r for r in case_records(load_reports(ROOT / "reports"))
-                              if r["id"] == saved_case.id and r["snapshot"] == snapshot.today.isoformat()), None)
+                              if r["id"] == result.case.id and r["snapshot"] == snapshot.today.isoformat()), None)
             except (OSError, ValueError):
                 saved = None
         if saved:
             with st.container(key="saved-baseline"):
                 st.markdown('<span class="source-tag source-saved">Saved baseline report</span>', unsafe_allow_html=True)
-                st.markdown(f"The committed report for {saved_case.id} on {snapshot.source_name} has final verdict "
-                            f"{pill(saved['verdict'])}.", unsafe_allow_html=True)
+                saved_answer = saved["answer_metric"]["verdict"] if saved["answer_metric"] else None
+                st.markdown(f"The committed report for {result.case.id} on {snapshot.source_name} has saved answer verdict "
+                            f"{pill(saved_answer)} and final verdict {pill(saved['verdict'])}.", unsafe_allow_html=True)
+                st.caption("Compare the live check with the saved answer verdict: the final verdict also counts the "
+                           "judge's reasoning verdict, which the playground does not run.")
                 with st.expander("Saved reply from the baseline run"):
                     st.code(saved["response"] or "No response: the assistant call failed.", language=None, wrap_lines=True)
