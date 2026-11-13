@@ -88,3 +88,22 @@ python -m deposco_evals --data path/to/orders_2026-11-24.csv                  # 
 Copying the file into `data/` also makes `pytest` compare the ground truth with the independent cross-check for it automatically.
 
 A file with an unsupported header, status, carrier, date, or unit value is rejected with exit code 2 and an error naming the line, rather than being graded wrongly.
+
+## Results dashboard (optional)
+
+The dashboard is a read-only Streamlit view of the saved `reports/orders_*.json` files and the `calibration/` results. It shows:
+- the PASS, FLAG, FAIL, and ERROR counts
+- the snapshot comparison
+- metric and category pass rates
+- a case explorer
+- the answer-versus-reasoning split (P1, P10, P12)
+- judge calibration agreement, with its limitations
+
+It makes no API calls and writes no files.
+
+```bash
+pip install -e '.[dashboard]'      # adds Streamlit; the harness itself stays dependency-free
+streamlit run dashboard.py         # from the repository root; opens http://localhost:8501
+```
+
+Run it from the repository root so the theme in `.streamlit/config.toml` applies. It shows whatever reports are in `reports/`, so a new `python -m deposco_evals` run appears after a page refresh. Its tests run with `pytest`; the app smoke test is skipped when Streamlit isn't installed.
