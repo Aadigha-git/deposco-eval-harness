@@ -11,7 +11,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
-dashboard = ["streamlit>=1.67"]
+dashboard = ["streamlit>=1.67", "pandas>=2.1"]
 
 [tool.setuptools]
 packages = ["deposco_evals"]

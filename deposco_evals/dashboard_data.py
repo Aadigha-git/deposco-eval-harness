@@ -69,7 +69,6 @@ def case_records(reports: list[dict]) -> list[dict]:
             records.append({
                 **case,
                 "snapshot": report["reference_date"],
-                "data_file": report["data_file"],
                 "answer_metric": answer,
                 "reasoning_metric": reasoning,
                 "relation": relation(answer, reasoning),
